@@ -12,6 +12,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const SETTINGS_PATH = process.env.SETTINGS_PATH
   ? path.resolve(process.env.SETTINGS_PATH)
   : path.join(DATA_DIR, "settings.json");
+const DEFAULT_PUBLIC_BASE_URL = "https://counseller-production.up.railway.app";
 
 let launchInfo = {
   url: "",
@@ -393,6 +394,43 @@ function getLocalAddress() {
   return "localhost";
 }
 
+function normalizeBaseUrl(value) {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/\/+$/, "");
+  }
+
+  return `https://${trimmed.replace(/\/+$/, "")}`;
+}
+
+function getPublicBaseUrl(port) {
+  const candidates = [
+    process.env.PUBLIC_BASE_URL,
+    process.env.RAILWAY_PUBLIC_DOMAIN,
+    process.env.RAILWAY_STATIC_URL,
+    SETTINGS.host,
+    DEFAULT_PUBLIC_BASE_URL
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalizeBaseUrl(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  const address = getLocalAddress();
+  return `http://${address}:${port}`;
+}
+
 async function printQr(url) {
   try {
     const qr = await QRCode.toString(url, { type: "terminal", small: true });
@@ -403,8 +441,7 @@ async function printQr(url) {
 }
 
 app.listen(PORT, async () => {
-  const address = getLocalAddress();
-  const url = `http://${address}:${PORT}`;
+  const url = getPublicBaseUrl(PORT);
   const localUrl = `http://localhost:${PORT}`;
   const surveyUrl = `${url}/survey`;
   const adminUrl = `${url}/admin`;
