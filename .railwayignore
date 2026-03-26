@@ -1,0 +1,9 @@
+node_modules
+data
+.omc
+.omx
+start.bat
+start.ps1
+stop.bat
+stop.ps1
+settings.json

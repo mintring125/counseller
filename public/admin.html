@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>교우관계 분석 대시보드</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <header class="admin-header card">
+        <div>
+          <p class="eyebrow">Teacher Dashboard</p>
+          <h1>교우관계 분석 대시보드</h1>
+          <p class="muted">응답 현황, 관계망, 개인 분석을 한 화면에서 확인합니다.</p>
+        </div>
+        <div class="header-actions">
+          <button id="refresh-button" class="ghost-button">새로고침</button>
+          <button id="export-button" class="primary-button">데이터 내보내기</button>
+        </div>
+      </header>
+
+      <section id="auth-panel" class="card auth-card">
+        <div>
+          <p class="eyebrow">보호된 화면</p>
+          <h2>관리자 비밀번호를 입력해 주세요</h2>
+        </div>
+        <form id="auth-form" class="auth-form">
+          <input id="password-input" type="password" placeholder="비밀번호" autocomplete="current-password" />
+          <button type="submit" class="primary-button">확인</button>
+        </form>
+        <p id="auth-message" class="helper-text"></p>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <div class="stats-grid">
+          <article class="card stat-card">
+            <span class="stat-label">응답 현황</span>
+            <strong id="response-count">0 / 11</strong>
+            <div class="progress-track"><div id="response-progress" class="progress-bar"></div></div>
+          </article>
+          <article class="card stat-card">
+            <span class="stat-label">긍정 지명 합계</span>
+            <strong id="positive-total">0</strong>
+          </article>
+          <article class="card stat-card">
+            <span class="stat-label">부정 지명 합계</span>
+            <strong id="negative-total">0</strong>
+          </article>
+          <article class="card stat-card">
+            <span class="stat-label">상호 선택 수</span>
+            <strong id="mutual-total">0</strong>
+          </article>
+        </div>
+
+        <section class="card toolbar-card">
+          <div class="tab-row">
+            <button class="tab-button active" data-tab="sociogram">소시오그램</button>
+            <button class="tab-button" data-tab="matrix">관계 행렬</button>
+            <button class="tab-button" data-tab="profiles">개인 분석</button>
+            <button class="tab-button" data-tab="stats">통계</button>
+          </div>
+          <div class="filter-row">
+            <label><input id="positive-filter" type="checkbox" checked /> 긍정 관계</label>
+            <label><input id="negative-filter" type="checkbox" checked /> 부정 관계</label>
+            <select id="question-filter"></select>
+          </div>
+        </section>
+
+        <section id="tab-sociogram" class="tab-panel active">
+          <article class="card panel-card">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Network View</p>
+                <h2>소시오그램</h2>
+              </div>
+              <p class="muted">학생을 클릭하면 관계가 강조됩니다.</p>
+            </div>
+            <div id="sociogram" class="sociogram-stage"></div>
+          </article>
+        </section>
+
+        <section id="tab-matrix" class="tab-panel">
+          <article class="card panel-card">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Matrix View</p>
+                <h2>관계 행렬</h2>
+              </div>
+            </div>
+            <div id="matrix" class="matrix-stage"></div>
+          </article>
+        </section>
+
+        <section id="tab-profiles" class="tab-panel">
+          <article class="card panel-card">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Profiles</p>
+                <h2>학생별 분석</h2>
+              </div>
+            </div>
+            <div id="profiles" class="profile-grid"></div>
+          </article>
+        </section>
+
+        <section id="tab-stats" class="tab-panel">
+          <div class="chart-grid">
+            <article class="card panel-card">
+              <div class="panel-title-row">
+                <div>
+                  <p class="eyebrow">Overview</p>
+                  <h2>지명 분포</h2>
+                </div>
+              </div>
+              <div class="canvas-wrap"><canvas id="distribution-chart"></canvas></div>
+            </article>
+            <article class="card panel-card">
+              <div class="panel-title-row">
+                <div>
+                  <p class="eyebrow">Class Climate</p>
+                  <h2>체크 문항 평균</h2>
+                </div>
+              </div>
+              <div class="canvas-wrap"><canvas id="climate-chart"></canvas></div>
+            </article>
+          </div>
+          <article class="card panel-card">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Attention</p>
+                <h2>관심 필요 학생</h2>
+              </div>
+            </div>
+            <div id="attention-list" class="attention-list"></div>
+          </article>
+        </section>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/data.js"></script>
+    <script src="/js/analysis.js"></script>
+    <script src="/js/sociogram.js"></script>
+    <script src="/js/charts.js"></script>
+    <script src="/js/admin.js"></script>
+  </body>
+</html>
