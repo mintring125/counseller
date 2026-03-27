@@ -136,7 +136,7 @@
         ${items.map((item) => `
           <div class="peer-card ${tone}">
             <strong>${escapeHtml(item.student.name)}</strong>
-            <span>${escapeHtml(item.caption)}</span>
+            <span>${item.captionHtml || escapeHtml(item.caption)}</span>
           </div>
         `).join("")}
       </div>
@@ -161,6 +161,49 @@
     return chips.map((chip) => `
       <span class="signal-chip ${chip.tone || "neutral"}">${escapeHtml(chip.label)}</span>
     `).join("");
+  }
+
+  function formatAverage(value) {
+    return Number.isFinite(value) ? value.toFixed(1) : "-";
+  }
+
+  function deltaInfo(value, average, preferLow = false) {
+    const delta = value - average;
+    const abs = Math.abs(delta);
+    const tone = abs < 0.15
+      ? "neutral"
+      : preferLow
+        ? delta > 0 ? "warn" : "good"
+        : delta > 0 ? "good" : "warn";
+
+    const label = abs < 0.15
+      ? "평균 수준"
+      : `${delta > 0 ? "+" : "-"}${abs.toFixed(1)}`;
+
+    return { tone, label };
+  }
+
+  function renderComparePills(value, average, preferLow = false) {
+    const delta = deltaInfo(value, average, preferLow);
+    return `
+      <div class="compare-pill-row">
+        <span class="compare-pill neutral">평균 ${formatAverage(average)}</span>
+        <span class="compare-pill ${delta.tone}">${delta.label}</span>
+      </div>
+    `;
+  }
+
+  function renderCompareOrPending(value, average, preferLow, hasValue) {
+    if (!hasValue) {
+      return `
+        <div class="compare-pill-row">
+          <span class="compare-pill neutral">평균 ${formatAverage(average)}</span>
+          <span class="compare-pill neutral">응답 없음</span>
+        </div>
+      `;
+    }
+
+    return renderComparePills(value, average, preferLow);
   }
 
   function buildKeywordChips(metric, analysis, directConnections) {
@@ -241,7 +284,7 @@
     ];
   }
 
-  function renderQuestionRows(metric, lookup) {
+  function renderQuestionRows(metric, lookup, analysis) {
     const reasonMap = Object.fromEntries(metric.reasonEntries.map((entry) => [entry.questionId, entry]));
     const rows = nominationQuestions
       .filter((question) => question.category !== "text")
@@ -250,6 +293,7 @@
         const sentIds = isPositive ? metric.positiveSentByQuestion[question.id] : metric.negativeSentByQuestion[question.id];
         const receivedIds = isPositive ? metric.positiveReceivedByQuestion[question.id] : metric.negativeReceivedByQuestion[question.id];
         const reasonEntry = reasonMap[question.id];
+        const questionBenchmark = analysis.benchmarks.nominationQuestions[question.id];
 
         if (!sentIds.length && !receivedIds.length && !reasonEntry) {
           return "";
@@ -269,10 +313,12 @@
             <div class="question-story-grid">
               <div class="question-story-block">
                 <span class="story-label">${sentLabel}</span>
+                ${renderComparePills(sentIds.length, questionBenchmark.sentAverage, isPositive ? false : true)}
                 <div class="mini-pill-row">${renderNamePills(sentIds, lookup, "없음")}</div>
               </div>
               <div class="question-story-block">
                 <span class="story-label">${receivedLabel}</span>
+                ${renderComparePills(receivedIds.length, questionBenchmark.receivedAverage, isPositive ? false : true)}
                 <div class="mini-pill-row">${renderNamePills(receivedIds, lookup, "없음")}</div>
               </div>
             </div>
@@ -379,12 +425,12 @@
       .sort((a, b) => b.total - a.total || a.student.name.localeCompare(b.student.name))
       .map((item) => {
         const captionParts = [];
-        if (item.positiveReceived) captionParts.push(`받은 긍정 ${item.positiveReceived}`);
-        if (item.positiveSent) captionParts.push(`보낸 긍정 ${item.positiveSent}`);
-        if (item.negativeReceived) captionParts.push(`받은 부정 ${item.negativeReceived}`);
-        if (item.negativeSent) captionParts.push(`보낸 부정 ${item.negativeSent}`);
+        if (item.positiveReceived) captionParts.push(`받은 <span class="relation-word positive">긍정</span> ${item.positiveReceived}`);
+        if (item.positiveSent) captionParts.push(`보낸 <span class="relation-word positive">긍정</span> ${item.positiveSent}`);
+        if (item.negativeReceived) captionParts.push(`받은 <span class="relation-word negative">부정</span> ${item.negativeReceived}`);
+        if (item.negativeSent) captionParts.push(`보낸 <span class="relation-word negative">부정</span> ${item.negativeSent}`);
         if (!captionParts.length) captionParts.push("서술 메모 연결");
-        return { student: item.student, caption: captionParts.join(" · ") };
+        return { student: item.student, captionHtml: captionParts.join(" · "), caption: "" };
       });
     const topIncoming = peerTotals
       .filter((item) => item.positiveReceived > 0)
@@ -413,6 +459,7 @@
       .map((student) => ({ student, caption: "상호 선택 관계" }));
     const keywordChips = buildKeywordChips(metric, analysis, directConnections);
     const spotlightCards = buildSpotlightCards(metric, analysis, directConnections);
+    const overallBenchmarks = analysis.benchmarks.overall;
 
     return `
       <section class="profile-detail-shell ${focusMode ? "focus-mode" : ""}">
@@ -434,22 +481,22 @@
           <article class="detail-stat-card">
             <span class="stat-label">긍정 지명</span>
             <strong>${metric.positiveReceived}</strong>
-            <p>친구들이 선택한 횟수</p>
+            ${renderComparePills(metric.positiveReceived, overallBenchmarks.positiveReceivedAverage)}
           </article>
           <article class="detail-stat-card">
             <span class="stat-label">상호 선택</span>
             <strong>${metric.mutuals.size}</strong>
-            <p>서로 선택한 관계</p>
+            ${renderComparePills(metric.mutuals.size, overallBenchmarks.mutualAverage)}
           </article>
           <article class="detail-stat-card negative">
             <span class="stat-label">부정 지명</span>
             <strong>${metric.negativeReceived}</strong>
-            <p>거리감 신호</p>
+            ${renderComparePills(metric.negativeReceived, overallBenchmarks.negativeReceivedAverage, true)}
           </article>
           <article class="detail-stat-card">
             <span class="stat-label">체크 평균</span>
             <strong>${metric.checkAverage ? metric.checkAverage.toFixed(1) : "-"}</strong>
-            <p>자기 인식 점수</p>
+            ${renderCompareOrPending(metric.checkAverage || 0, overallBenchmarks.checkAverage, false, metric.checkAverage > 0)}
           </article>
         </div>
 
@@ -571,7 +618,7 @@
             </div>
           </div>
           <div class="question-story-list">
-            ${renderQuestionRows(metric, lookup)}
+            ${renderQuestionRows(metric, lookup, analysis)}
           </div>
         </article>
 

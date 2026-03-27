@@ -126,6 +126,11 @@
     return { overview, strengths, risks, focus };
   }
 
+  function average(values) {
+    if (!values.length) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  }
+
   function analyzeResponses(responses) {
     const metrics = Object.fromEntries(students.map((student) => [student.id, createMetric(student)]));
     const edges = [];
@@ -314,11 +319,47 @@
       return [question.id, average];
     }));
 
+    const benchmarks = {
+      overall: {
+        positiveReceivedAverage: average(students.map((student) => metrics[student.id].positiveReceived)),
+        negativeReceivedAverage: average(students.map((student) => metrics[student.id].negativeReceived)),
+        mutualAverage: average(students.map((student) => metrics[student.id].mutuals.size)),
+        checkAverage: average(
+          students
+            .map((student) => metrics[student.id].checkAverage)
+            .filter((value) => value > 0)
+        )
+      },
+      nominationQuestions: Object.fromEntries(
+        nominationQuestions
+          .filter((question) => question.category !== "text")
+          .map((question) => {
+            const sentCounts = responses.map((response) => {
+              const selected = response.nominations?.[question.id]?.selected;
+              return Array.isArray(selected) ? selected.length : 0;
+            });
+            const receivedCounts = students.map((student) => {
+              const metric = metrics[student.id];
+              const bucket = question.category === "positive"
+                ? metric.positiveReceivedByQuestion[question.id]
+                : metric.negativeReceivedByQuestion[question.id];
+              return bucket.length;
+            });
+
+            return [question.id, {
+              sentAverage: average(sentCounts),
+              receivedAverage: average(receivedCounts)
+            }];
+          })
+      )
+    };
+
     return {
       metrics,
       edges,
       matrix,
       climateAverages,
+      benchmarks,
       thresholds,
       mutualCount: Math.floor(students.reduce((sum, student) => sum + metrics[student.id].mutuals.size, 0) / 2)
     };
