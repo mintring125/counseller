@@ -29,20 +29,27 @@
     const matrix = Object.fromEntries(students.map((student) => [student.id, Object.fromEntries(students.map((item) => [item.id, 0]))]));
 
     responses.forEach((response) => {
+      if (!response.nominations) return;
       positiveIds.forEach((id) => {
-        const selected = response.nominations[id].selected;
+        const nomination = response.nominations[id];
+        if (!nomination || !Array.isArray(nomination.selected)) return;
+        const selected = nomination.selected;
         metrics[response.respondentId].positiveSent += selected.length;
         if (id === "q9") metrics[response.respondentId].connectorScore += selected.length;
         selected.forEach((targetId) => {
+          if (!metrics[targetId]) return;
           metrics[targetId].positiveReceived += 1;
           matrix[response.respondentId][targetId] += 1;
           edges.push({ source: response.respondentId, target: targetId, type: "positive", questionId: id });
         });
       });
       negativeIds.forEach((id) => {
-        const selected = response.nominations[id].selected;
+        const nomination = response.nominations[id];
+        if (!nomination || !Array.isArray(nomination.selected)) return;
+        const selected = nomination.selected;
         metrics[response.respondentId].negativeSent += selected.length;
         selected.forEach((targetId) => {
+          if (!metrics[targetId]) return;
           metrics[targetId].negativeReceived += 1;
           matrix[response.respondentId][targetId] -= 1;
           edges.push({ source: response.respondentId, target: targetId, type: "negative", questionId: id });
@@ -65,11 +72,17 @@
 
     const responseMap = Object.fromEntries(responses.map((item) => [item.respondentId, item]));
     responses.forEach((response) => {
+      if (!response.nominations) return;
       positiveIds.forEach((questionId) => {
-        response.nominations[questionId].selected.forEach((targetId) => {
+        const nomination = response.nominations[questionId];
+        if (!nomination || !Array.isArray(nomination.selected)) return;
+        nomination.selected.forEach((targetId) => {
           const targetResponse = responseMap[targetId];
-          if (!targetResponse) return;
-          const selectedBack = positiveIds.some((id) => targetResponse.nominations[id].selected.includes(response.respondentId));
+          if (!targetResponse || !targetResponse.nominations) return;
+          const selectedBack = positiveIds.some((id) => {
+            const targetNom = targetResponse.nominations[id];
+            return targetNom && Array.isArray(targetNom.selected) && targetNom.selected.includes(response.respondentId);
+          });
           if (selectedBack) {
             metrics[response.respondentId].mutuals.add(targetId);
             metrics[targetId].mutuals.add(response.respondentId);
