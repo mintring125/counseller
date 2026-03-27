@@ -1,5 +1,5 @@
 (function sociogramModule() {
-  function renderSociogram(container, students, analysis, filters) {
+  function renderSociogram(container, students, analysis, filters, options = {}) {
     container.innerHTML = "";
     if (!analysis.edges.length) {
       container.innerHTML = '<div class="empty-state">응답이 쌓이면 관계망이 여기에 표시됩니다.</div>';
@@ -44,6 +44,8 @@
       .attr("opacity", 0.8);
 
     const node = svg.append("g").selectAll("g").data(nodes).join("g")
+      .attr("class", "sociogram-node")
+      .style("cursor", typeof options.onSelectStudent === "function" ? "pointer" : "grab")
       .call(d3.drag()
         .on("start", (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -59,6 +61,13 @@
           d.fx = null;
           d.fy = null;
         }));
+
+    if (typeof options.onSelectStudent === "function") {
+      node.on("click", (event, d) => {
+        if (event.defaultPrevented) return;
+        options.onSelectStudent(d.id);
+      });
+    }
 
     node.append("circle").attr("r", (d) => d.radius).attr("fill", (d) => (d.gender === "남" ? "#74b9ff" : "#fd79a8")).attr("stroke", "#fff").attr("stroke-width", 4);
     node.append("text").text((d) => d.name).attr("text-anchor", "middle").attr("dy", 4).attr("font-size", 12).attr("font-weight", 700).attr("fill", "#1f2433");

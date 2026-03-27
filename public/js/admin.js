@@ -9,6 +9,8 @@
     responses: [],
     status: null,
     analysis: null,
+    selectedStudentId: students[0]?.id || null,
+    profileFocusMode: false,
     filters: { showPositive: true, showNegative: true, questionId: "all" }
   };
 
@@ -31,6 +33,15 @@
   const attentionList = document.getElementById("attention-list");
   const distributionCanvas = document.getElementById("distribution-chart");
   const climateCanvas = document.getElementById("climate-chart");
+
+  function activateTab(tabName) {
+    document.querySelectorAll(".tab-button").forEach((item) => {
+      item.classList.toggle("active", item.dataset.tab === tabName);
+    });
+    document.querySelectorAll(".tab-panel").forEach((panel) => {
+      panel.classList.toggle("active", panel.id === `tab-${tabName}`);
+    });
+  }
 
   function adminHeaders() {
     return { "x-admin-password": state.password };
@@ -56,7 +67,14 @@
     state.status = await statusResponse.json();
     state.responses = await surveyResponse.json();
     state.analysis = window.Analysis.analyzeResponses(state.responses);
+    syncSelectedStudent();
     renderDashboard();
+  }
+
+  function syncSelectedStudent() {
+    const validIds = new Set(students.map((student) => student.id));
+    if (state.selectedStudentId && validIds.has(state.selectedStudentId)) return;
+    state.selectedStudentId = state.responses[0]?.respondentId || students[0]?.id || null;
   }
 
   function renderStats() {
@@ -77,12 +95,53 @@
   function renderDashboard() {
     renderStats();
     renderQuestionFilter();
-    window.Sociogram.renderSociogram(sociogramContainer, students, state.analysis, state.filters);
+    window.Sociogram.renderSociogram(sociogramContainer, students, state.analysis, state.filters, {
+      onSelectStudent(studentId) {
+        state.selectedStudentId = Number(studentId);
+        state.profileFocusMode = true;
+        activateTab("profiles");
+        renderProfilesPanel();
+      }
+    });
     window.DashboardCharts.renderMatrix(matrixContainer, students, state.analysis);
-    window.DashboardCharts.renderProfiles(profilesContainer, students, state.analysis, state.responses);
+    renderProfilesPanel();
     window.DashboardCharts.renderDistribution(distributionCanvas, students, state.analysis);
     window.DashboardCharts.renderClimate(climateCanvas, checkQuestions, state.analysis);
     window.DashboardCharts.renderAttention(attentionList, students, state.analysis);
+  }
+
+  function renderProfilesPanel() {
+    window.DashboardCharts.renderProfiles(
+      profilesContainer,
+      students,
+      state.analysis,
+      state.responses,
+      state.selectedStudentId,
+      state.profileFocusMode
+    );
+
+    profilesContainer.querySelectorAll("[data-profile-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.selectedStudentId = Number(button.dataset.profileId);
+        renderProfilesPanel();
+      });
+    });
+
+    const enterFocusButton = profilesContainer.querySelector("[data-enter-focus]");
+    if (enterFocusButton) {
+      enterFocusButton.addEventListener("click", () => {
+        state.profileFocusMode = true;
+        renderProfilesPanel();
+      });
+    }
+
+    const exitFocusButton = profilesContainer.querySelector("[data-exit-focus]");
+    if (exitFocusButton) {
+      exitFocusButton.addEventListener("click", () => {
+        state.profileFocusMode = false;
+        renderProfilesPanel();
+      });
+    }
   }
 
   function activateDashboard() {
@@ -108,10 +167,7 @@
 
   document.querySelectorAll(".tab-button").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".tab-button").forEach((item) => item.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
-      button.classList.add("active");
-      document.getElementById(`tab-${button.dataset.tab}`).classList.add("active");
+      activateTab(button.dataset.tab);
     });
   });
 
