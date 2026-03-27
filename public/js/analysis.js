@@ -55,7 +55,8 @@
           edges.push({ source: response.respondentId, target: targetId, type: "negative", questionId: id });
         });
       });
-      const checkValues = checkQuestions.map((question) => Number(response.checkItems[question.id] || 0));
+      const items = response.checkItems || {};
+      const checkValues = checkQuestions.map((question) => Number(items[question.id] || 0));
       metrics[response.respondentId].checkAverage = checkValues.reduce((sum, value) => sum + value, 0) / checkValues.length;
     });
 
