@@ -13,8 +13,9 @@
 
   function nodeVisual(metric, analysis) {
     const { thresholds } = analysis;
-    const attentionScore = metric.positiveReceived + metric.negativeReceived + metric.mutuals.size;
-    const radius = 24 + Math.min(attentionScore * 2, 20);
+    /* Score based on total nominations received across all questions — larger score = bigger node */
+    const nominationScore = metric.positiveReceived * 1.2 + metric.negativeReceived * 0.8 + metric.mutuals.size * 1.5;
+    const radius = 26 + Math.min(nominationScore * 1.6, 22);
 
     if (metric.negativeReceived >= thresholds.negativeTop && metric.positiveReceived <= thresholds.positiveUpperHalf) {
       return {
@@ -456,74 +457,64 @@
       .attr("fill", "rgba(255, 255, 255, 0.2)")
       .attr("pointer-events", "none");
 
-    /* Name text inside node (2-character surname) */
+    /* Full name text inside node */
     node.append("text")
       .attr("class", "node-name-inner")
-      .text((d) => d.name.length >= 2 ? d.name.slice(0, 2) : d.name)
+      .text((d) => d.name)
       .attr("text-anchor", "middle")
-      .attr("dy", 1)
-      .attr("font-size", (d) => Math.max(d.radius * 0.55, 12))
+      .attr("dy", 2)
+      .attr("font-size", (d) => {
+        const nameLen = d.name.length;
+        if (nameLen <= 2) return Math.max(d.radius * 0.6, 13);
+        if (nameLen === 3) return Math.max(d.radius * 0.48, 12);
+        return Math.max(d.radius * 0.38, 11);
+      })
       .attr("font-weight", 800)
       .attr("fill", "#ffffff")
       .attr("pointer-events", "none")
       .style("text-shadow", "0 1px 3px rgba(0,0,0,0.3)");
 
-    /* Label line + tag above node */
-    const label = node.append("g")
+    /* Status badge above node — only for non-"일반" status */
+    const statusLabel = node.filter((d) => d.shortLabel !== "일반")
+      .append("g")
       .attr("class", "sociogram-label")
-      .attr("transform", (d) => `translate(0, ${-(d.radius + 18)})`);
+      .attr("transform", (d) => `translate(0, ${-(d.radius + 14)})`);
 
     /* Connector line */
-    label.append("line")
+    statusLabel.append("line")
       .attr("x1", 0)
-      .attr("y1", (d) => d.radius + 4)
+      .attr("y1", (d) => d.radius + 2)
       .attr("x2", 0)
-      .attr("y2", 8)
-      .attr("stroke", "rgba(31,36,51,0.15)")
-      .attr("stroke-width", 1.2)
+      .attr("y2", 6)
+      .attr("stroke", "rgba(31,36,51,0.12)")
+      .attr("stroke-width", 1)
       .attr("stroke-dasharray", "2 2");
 
-    /* Full name text */
-    label.append("text")
-      .text((d) => d.name)
-      .attr("text-anchor", "middle")
-      .attr("font-size", 12)
-      .attr("font-weight", 700)
-      .attr("fill", "#1f2433")
-      .attr("dy", 4);
-
-    /* Status badge text */
-    label.append("text")
+    /* Status text only (no name) */
+    statusLabel.append("text")
       .text((d) => d.shortLabel)
       .attr("text-anchor", "middle")
-      .attr("font-size", 9)
-      .attr("font-weight", 600)
+      .attr("font-size", 10)
+      .attr("font-weight", 700)
       .attr("fill", (d) => d.fillStart)
-      .attr("dy", 18)
-      .attr("opacity", 0.8);
+      .attr("dy", 4);
 
-    /* Background pill for the label */
-    label.each(function bindLabelBox() {
+    /* Background pill for the status label */
+    statusLabel.each(function bindLabelBox() {
       const group = d3.select(this);
-      const texts = group.selectAll("text").nodes();
-      if (texts.length < 1) return;
-      const nameText = texts[0];
-      const bbox = nameText.getBBox();
-      const statusText = texts.length >= 2 ? texts[1] : null;
-      const statusBbox = statusText ? statusText.getBBox() : { y: bbox.y + bbox.height, height: 0 };
-      const totalWidth = Math.max(bbox.width, statusText ? statusBbox.width : 0) + 20;
-      const totalHeight = (statusBbox.y + statusBbox.height) - bbox.y + 12;
-
+      const text = group.select("text").node();
+      if (!text) return;
+      const bbox = text.getBBox();
       group.insert("rect", "text")
-        .attr("x", -totalWidth / 2)
-        .attr("y", bbox.y - 6)
-        .attr("width", totalWidth)
-        .attr("height", totalHeight)
-        .attr("rx", 10)
+        .attr("x", bbox.x - 8)
+        .attr("y", bbox.y - 4)
+        .attr("width", bbox.width + 16)
+        .attr("height", bbox.height + 8)
+        .attr("rx", 8)
         .attr("fill", "rgba(255,255,255,0.94)")
-        .attr("stroke", "rgba(108,92,231,0.14)")
+        .attr("stroke", (d) => d.glow)
         .attr("stroke-width", 1)
-        .attr("filter", "drop-shadow(0 2px 6px rgba(31,36,51,0.08))");
+        .attr("filter", "drop-shadow(0 2px 4px rgba(31,36,51,0.06))");
     });
 
     /* Tooltip */

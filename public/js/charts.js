@@ -438,13 +438,15 @@
         const isMutual = metric.mutuals.has(item.student.id);
         const tags = [];
         if (isMutual) {
+          /* 상호선택이면 그것만 표시 */
           tags.push(`<span class="flow-tag mutual"><span class="flow-arrow">⟷</span> 상호선택</span>`);
+        } else {
+          if (item.positiveReceived) tags.push(`<span class="flow-tag received positive"><span class="flow-arrow">←</span> 긍정 ${item.positiveReceived}</span>`);
+          if (item.positiveSent) tags.push(`<span class="flow-tag sent positive"><span class="flow-arrow">→</span> 긍정 ${item.positiveSent}</span>`);
+          if (item.negativeReceived) tags.push(`<span class="flow-tag received negative"><span class="flow-arrow">←</span> 부정 ${item.negativeReceived}</span>`);
+          if (item.negativeSent) tags.push(`<span class="flow-tag sent negative"><span class="flow-arrow">→</span> 부정 ${item.negativeSent}</span>`);
+          if (!tags.length) tags.push(`<span class="flow-tag memo">📝 서술 메모 연결</span>`);
         }
-        if (item.positiveReceived) tags.push(`<span class="flow-tag received positive"><span class="flow-arrow">←</span> 긍정 ${item.positiveReceived}</span>`);
-        if (item.positiveSent) tags.push(`<span class="flow-tag sent positive"><span class="flow-arrow">→</span> 긍정 ${item.positiveSent}</span>`);
-        if (item.negativeReceived) tags.push(`<span class="flow-tag received negative"><span class="flow-arrow">←</span> 부정 ${item.negativeReceived}</span>`);
-        if (item.negativeSent) tags.push(`<span class="flow-tag sent negative"><span class="flow-arrow">→</span> 부정 ${item.negativeSent}</span>`);
-        if (!tags.length) tags.push(`<span class="flow-tag memo">📝 서술 메모 연결</span>`);
         return { student: item.student, captionHtml: tags.join(""), caption: "" };
       });
     const topIncoming = peerTotals
