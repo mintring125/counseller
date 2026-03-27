@@ -487,7 +487,7 @@
             <p class="muted">${escapeHtml(metric.student.gender)} · ${escapeHtml(typeLabels[metric.type] || metric.type)} · ${responseMap[metric.student.id] ? "응답 완료" : "미응답"}</p>
           </div>
           <div class="profile-detail-actions">
-            ${focusMode ? '<button type="button" class="ghost-button" data-exit-focus>학생 목록 보기</button>' : '<button type="button" class="primary-button" data-enter-focus>개별 상담 모드</button>'}
+            ${focusMode ? '<button type="button" class="ghost-button" data-exit-focus>상담 모드 종료</button>' : '<button type="button" class="primary-button" data-enter-focus>개별 상담 모드</button>'}
             <span class="pill ${metric.needsAttention ? "alert" : "good"}">${metric.needsAttention ? "관심 필요" : "안정"}</span>
           </div>
         </div>
@@ -627,11 +627,19 @@
           </div>
         </article>
 
-        <article class="detail-panel-card">
+        <article class="detail-panel-card ego-panel-card">
           <div class="panel-title-row">
             <div>
               <p class="eyebrow">Ego Network</p>
               <h4>개인 관계망</h4>
+            </div>
+            <div class="ego-filter-bar">
+              <select id="ego-question-filter" class="ego-question-select">
+                <option value="all">전체 문항</option>
+                ${nominationQuestions.map((q) => `<option value="${q.id}">${q.id.toUpperCase()} · ${q.text}</option>`).join("")}
+              </select>
+              <label class="ego-toggle"><input type="checkbox" id="ego-show-positive" checked> 긍정</label>
+              <label class="ego-toggle"><input type="checkbox" id="ego-show-negative" checked> 부정</label>
             </div>
           </div>
           <div id="ego-sociogram-container" class="ego-sociogram-stage" data-focus-id="${metric.student.id}"></div>
@@ -708,13 +716,6 @@
     const profileCanvas = container.querySelector("#profile-check-chart");
     if (profileCanvas) {
       renderProfileCheckChart(profileCanvas, metric, analysis);
-    }
-
-    /* Render ego sociogram if container exists */
-    const egoContainer = container.querySelector("#ego-sociogram-container");
-    if (egoContainer && window.Sociogram.renderEgoSociogram) {
-      const focusId = Number(egoContainer.dataset.focusId);
-      window.Sociogram.renderEgoSociogram(egoContainer, students, analysis, focusId);
     }
   }
 

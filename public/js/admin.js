@@ -132,6 +132,13 @@
       enterFocusButton.addEventListener("click", () => {
         state.profileFocusMode = true;
         renderProfilesPanel();
+        /* Enter fullscreen */
+        const shell = profilesContainer.querySelector(".profile-detail-shell");
+        if (shell && shell.requestFullscreen) {
+          shell.requestFullscreen().catch(() => {});
+        } else if (shell && shell.webkitRequestFullscreen) {
+          shell.webkitRequestFullscreen();
+        }
       });
     }
 
@@ -139,9 +146,53 @@
     if (exitFocusButton) {
       exitFocusButton.addEventListener("click", () => {
         state.profileFocusMode = false;
+        /* Exit fullscreen */
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitFullscreenElement) {
+          document.webkitExitFullscreen();
+        }
         renderProfilesPanel();
       });
     }
+
+    /* Ego sociogram filter wiring */
+    wireEgoFilters();
+  }
+
+  function wireEgoFilters() {
+    const egoContainer = profilesContainer.querySelector("#ego-sociogram-container");
+    const egoQuestionFilter = profilesContainer.querySelector("#ego-question-filter");
+    const egoShowPositive = profilesContainer.querySelector("#ego-show-positive");
+    const egoShowNegative = profilesContainer.querySelector("#ego-show-negative");
+    if (!egoContainer) return;
+
+    const focusId = Number(egoContainer.dataset.focusId);
+
+    function getEgoFilters() {
+      return {
+        questionId: egoQuestionFilter ? egoQuestionFilter.value : "all",
+        showPositive: egoShowPositive ? egoShowPositive.checked : true,
+        showNegative: egoShowNegative ? egoShowNegative.checked : true
+      };
+    }
+
+    function rerenderEgo() {
+      window.Sociogram.renderEgoSociogram(egoContainer, students, state.analysis, focusId, getEgoFilters());
+    }
+
+    if (egoQuestionFilter) {
+      egoQuestionFilter.addEventListener("change", rerenderEgo);
+    }
+    if (egoShowPositive) {
+      egoShowPositive.addEventListener("change", rerenderEgo);
+    }
+    if (egoShowNegative) {
+      egoShowNegative.addEventListener("change", rerenderEgo);
+    }
+
+    /* Initial render */
+    rerenderEgo();
   }
 
   function activateDashboard() {

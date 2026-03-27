@@ -607,12 +607,14 @@
   /* ───── Ego (personal) sociogram for student profile ───── */
   let egoSimulation = null;
 
-  function renderEgoSociogram(container, students, analysis, focusStudentId) {
+  function renderEgoSociogram(container, students, analysis, focusStudentId, filters) {
     container.innerHTML = "";
     if (egoSimulation) {
       egoSimulation.stop();
       egoSimulation = null;
     }
+
+    const egoFilters = filters || { questionId: "all", showPositive: true, showNegative: true };
 
     if (!analysis.edges.length) {
       container.innerHTML = '<div class="empty-state">응답이 쌓이면 개인 관계망이 여기에 표시됩니다.</div>';
@@ -622,13 +624,17 @@
     const focusMetric = analysis.metrics[focusStudentId];
     if (!focusMetric) return;
 
-    /* Filter edges: only those connected to the focus student */
-    const egoEdges = analysis.edges.filter((edge) =>
-      Number(edge.source) === focusStudentId || Number(edge.target) === focusStudentId
-    );
+    /* Filter edges: connected to focus student + question/type filters */
+    const egoEdges = analysis.edges.filter((edge) => {
+      if (Number(edge.source) !== focusStudentId && Number(edge.target) !== focusStudentId) return false;
+      if (egoFilters.questionId !== "all" && edge.questionId !== egoFilters.questionId) return false;
+      if (edge.type === "positive" && !egoFilters.showPositive) return false;
+      if (edge.type === "negative" && !egoFilters.showNegative) return false;
+      return true;
+    });
 
     if (!egoEdges.length) {
-      container.innerHTML = '<div class="empty-state">이 학생과 직접 연결된 관계가 아직 없습니다.</div>';
+      container.innerHTML = '<div class="empty-state">현재 필터 조건에 해당하는 관계가 없습니다.</div>';
       return;
     }
 
