@@ -630,13 +630,11 @@
         <article class="detail-panel-card">
           <div class="panel-title-row">
             <div>
-              <p class="eyebrow">Question Story</p>
-              <h4>문항별 직접 관계</h4>
+              <p class="eyebrow">Ego Network</p>
+              <h4>개인 관계망</h4>
             </div>
           </div>
-          <div class="question-story-list">
-            ${renderQuestionRows(metric, lookup, analysis)}
-          </div>
+          <div id="ego-sociogram-container" class="ego-sociogram-stage" data-focus-id="${metric.student.id}"></div>
         </article>
 
         <article class="detail-panel-card">
@@ -710,6 +708,13 @@
     const profileCanvas = container.querySelector("#profile-check-chart");
     if (profileCanvas) {
       renderProfileCheckChart(profileCanvas, metric, analysis);
+    }
+
+    /* Render ego sociogram if container exists */
+    const egoContainer = container.querySelector("#ego-sociogram-container");
+    if (egoContainer && window.Sociogram.renderEgoSociogram) {
+      const focusId = Number(egoContainer.dataset.focusId);
+      window.Sociogram.renderEgoSociogram(egoContainer, students, analysis, focusId);
     }
   }
 

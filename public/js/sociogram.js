@@ -604,5 +604,283 @@
       .style("opacity", 1);
   }
 
-  window.Sociogram = { renderSociogram };
+  /* ───── Ego (personal) sociogram for student profile ───── */
+  let egoSimulation = null;
+
+  function renderEgoSociogram(container, students, analysis, focusStudentId) {
+    container.innerHTML = "";
+    if (egoSimulation) {
+      egoSimulation.stop();
+      egoSimulation = null;
+    }
+
+    if (!analysis.edges.length) {
+      container.innerHTML = '<div class="empty-state">응답이 쌓이면 개인 관계망이 여기에 표시됩니다.</div>';
+      return;
+    }
+
+    const focusMetric = analysis.metrics[focusStudentId];
+    if (!focusMetric) return;
+
+    /* Filter edges: only those connected to the focus student */
+    const egoEdges = analysis.edges.filter((edge) =>
+      Number(edge.source) === focusStudentId || Number(edge.target) === focusStudentId
+    );
+
+    if (!egoEdges.length) {
+      container.innerHTML = '<div class="empty-state">이 학생과 직접 연결된 관계가 아직 없습니다.</div>';
+      return;
+    }
+
+    /* Connected student IDs */
+    const connectedIds = new Set();
+    connectedIds.add(focusStudentId);
+    egoEdges.forEach((edge) => {
+      connectedIds.add(Number(edge.source));
+      connectedIds.add(Number(edge.target));
+    });
+
+    const egoStudents = students.filter((s) => connectedIds.has(s.id));
+
+    const width = container.clientWidth || 700;
+    const height = 460;
+
+    const svg = d3.select(container).append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("width", "100%")
+      .attr("height", height)
+      .style("border-radius", "20px")
+      .style("overflow", "hidden");
+
+    const defs = svg.append("defs");
+
+    /* Background */
+    const bgGrad = defs.append("radialGradient")
+      .attr("id", "ego-bg-grad")
+      .attr("cx", "50%").attr("cy", "50%").attr("r", "60%");
+    bgGrad.append("stop").attr("offset", "0%").attr("stop-color", "rgba(108, 92, 231, 0.05)");
+    bgGrad.append("stop").attr("offset", "100%").attr("stop-color", "rgba(255, 255, 255, 0.6)");
+
+    svg.append("rect")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("rx", 20)
+      .attr("fill", "url(#ego-bg-grad)");
+
+    /* Arrow markers */
+    [
+      ["ego-positive", "#00b894"],
+      ["ego-negative", "#e17055"],
+      ["ego-mutual", "#f9a825"]
+    ].forEach(([id, color]) => {
+      defs.append("marker")
+        .attr("id", id)
+        .attr("viewBox", "0 -6 12 12")
+        .attr("refX", 10).attr("refY", 0)
+        .attr("markerWidth", 7).attr("markerHeight", 7)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("fill", color)
+        .attr("d", "M0,-5L10,0L0,5Z");
+    });
+
+    /* Focus student visual */
+    const focusVisual = nodeVisual(focusMetric, analysis);
+
+    /* Node gradient for focus student */
+    const focusGradId = "ego-focus-grad";
+    const focusGrad = defs.append("radialGradient").attr("id", focusGradId).attr("cx", "35%").attr("cy", "35%").attr("r", "65%");
+    focusGrad.append("stop").attr("offset", "0%").attr("stop-color", focusVisual.fillStart);
+    focusGrad.append("stop").attr("offset", "100%").attr("stop-color", focusVisual.fillEnd);
+
+    /* Build nodes */
+    const nodes = egoStudents.map((student, index) => {
+      const isFocus = student.id === focusStudentId;
+      const r = isFocus ? focusVisual.radius : 22;
+      const angle = (Math.PI * 2 * index) / Math.max(egoStudents.length, 1) - Math.PI / 2;
+      const orbitR = Math.min(width, height) * 0.30;
+      return {
+        ...student,
+        x: isFocus ? width / 2 : width / 2 + Math.cos(angle) * orbitR,
+        y: isFocus ? height / 2 : height / 2 + Math.sin(angle) * orbitR,
+        radius: r,
+        isFocus
+      };
+    });
+
+    /* Aggregate edges */
+    const mutualSets = new Map();
+    students.forEach(s => mutualSets.set(s.id, analysis.metrics[s.id].mutuals));
+    const aggEdges = aggregateEdges(egoEdges, mutualSets);
+
+    const zoomLayer = svg.append("g");
+    const edgeLayer = zoomLayer.append("g");
+    const nodeLayer = zoomLayer.append("g");
+
+    svg.call(
+      d3.zoom()
+        .scaleExtent([0.6, 2])
+        .on("zoom", (event) => zoomLayer.attr("transform", event.transform))
+    );
+
+    const simEdges = egoEdges.map(e => ({ ...e }));
+
+    egoSimulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(simEdges).id(d => d.id).distance(130).strength(0.3))
+      .force("charge", d3.forceManyBody().strength(-600))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(d => d.radius + 24));
+
+    /* Edge paths */
+    const linkGroup = edgeLayer.selectAll("g.ego-link")
+      .data(aggEdges)
+      .join("g")
+      .attr("class", "ego-link");
+
+    linkGroup.append("path")
+      .attr("fill", "none")
+      .attr("stroke", d => {
+        if (d.isMutual) return "#f9a825";
+        if (d.negativeCount > 0 && d.positiveCount === 0) return "#e17055";
+        return "#00b894";
+      })
+      .attr("stroke-width", d => {
+        const total = d.positiveCount + d.negativeCount;
+        return d.isMutual ? Math.min(total * 1.2 + 2.5, 5.5) : Math.min(total * 0.8 + 1.5, 4);
+      })
+      .attr("stroke-dasharray", d => (d.negativeCount > 0 && d.positiveCount === 0) ? "7 5" : "none")
+      .attr("marker-end", d => {
+        if (d.isMutual) return "url(#ego-mutual)";
+        if (d.negativeCount > 0 && d.positiveCount === 0) return "url(#ego-negative)";
+        return "url(#ego-positive)";
+      })
+      .attr("opacity", 0.75)
+      .attr("stroke-linecap", "round");
+
+    /* Node groups */
+    const node = nodeLayer.selectAll("g.ego-node")
+      .data(nodes)
+      .join("g")
+      .attr("class", "ego-node")
+      .style("cursor", "grab")
+      .call(d3.drag()
+        .on("start", (event, d) => {
+          if (!event.active) egoSimulation.alphaTarget(0.3).restart();
+          d.fx = d.x; d.fy = d.y;
+        })
+        .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+        .on("end", (event, d) => {
+          if (!event.active) egoSimulation.alphaTarget(0);
+          d.fx = null; d.fy = null;
+        }));
+
+    /* Halo for focus node */
+    node.filter(d => d.isFocus).append("circle")
+      .attr("r", d => d.radius + 10)
+      .attr("fill", focusVisual.halo)
+      .attr("fill-opacity", 0.25)
+      .attr("stroke", focusVisual.glow)
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.4);
+
+    /* Main circle */
+    node.append("circle")
+      .attr("r", d => d.radius)
+      .attr("fill", d => d.isFocus ? `url(#${focusGradId})` : "#c9d1e8")
+      .attr("stroke", "#ffffff")
+      .attr("stroke-width", d => d.isFocus ? 3.5 : 2.5)
+      .attr("filter", d => d.isFocus ? "drop-shadow(0 6px 12px rgba(31,36,51,0.18))" : "drop-shadow(0 3px 6px rgba(31,36,51,0.1))");
+
+    /* 3D highlight for focus */
+    node.filter(d => d.isFocus).append("circle")
+      .attr("r", d => d.radius * 0.5)
+      .attr("cx", d => -d.radius * 0.15)
+      .attr("cy", d => -d.radius * 0.2)
+      .attr("fill", "rgba(255,255,255,0.18)")
+      .attr("pointer-events", "none");
+
+    /* Name text inside all nodes */
+    node.append("text")
+      .text(d => d.name)
+      .attr("text-anchor", "middle")
+      .attr("dy", 2)
+      .attr("font-size", d => {
+        const len = d.name.length;
+        if (d.isFocus) {
+          if (len <= 2) return Math.max(d.radius * 0.55, 13);
+          if (len === 3) return Math.max(d.radius * 0.44, 12);
+          return Math.max(d.radius * 0.36, 11);
+        }
+        return len <= 2 ? 11 : len === 3 ? 10 : 9;
+      })
+      .attr("font-weight", d => d.isFocus ? 800 : 700)
+      .attr("fill", d => d.isFocus ? "#ffffff" : "#4a5068")
+      .attr("pointer-events", "none")
+      .style("text-shadow", d => d.isFocus ? "0 1px 3px rgba(0,0,0,0.3)" : "none");
+
+    /* Status label — ONLY for focus student */
+    const focusNode = node.filter(d => d.isFocus);
+    const statusG = focusNode.append("g")
+      .attr("class", "ego-status-label")
+      .attr("transform", d => `translate(0, ${-(d.radius + 12)})`);
+
+    statusG.append("text")
+      .text(focusVisual.shortLabel)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 10)
+      .attr("font-weight", 700)
+      .attr("fill", focusVisual.fillStart)
+      .attr("dy", 4);
+
+    statusG.each(function() {
+      const g = d3.select(this);
+      const t = g.select("text").node();
+      if (!t) return;
+      const bb = t.getBBox();
+      g.insert("rect", "text")
+        .attr("x", bb.x - 7)
+        .attr("y", bb.y - 3)
+        .attr("width", bb.width + 14)
+        .attr("height", bb.height + 6)
+        .attr("rx", 7)
+        .attr("fill", "rgba(255,255,255,0.94)")
+        .attr("stroke", focusVisual.glow)
+        .attr("stroke-width", 1);
+    });
+
+    /* Tooltip */
+    node.append("title")
+      .text(d => d.isFocus
+        ? `${d.name}\n${focusVisual.shortLabel}\n긍정 ${focusMetric.positiveReceived} / 부정 ${focusMetric.negativeReceived} / 상호 ${focusMetric.mutuals.size}`
+        : d.name
+      );
+
+    /* Curved path */
+    function buildEgoCurve(d) {
+      const sx = typeof d.source === "object" ? d.source.x : nodes.find(n => n.id === d.source)?.x || 0;
+      const sy = typeof d.source === "object" ? d.source.y : nodes.find(n => n.id === d.source)?.y || 0;
+      const tx = typeof d.target === "object" ? d.target.x : nodes.find(n => n.id === d.target)?.x || 0;
+      const ty = typeof d.target === "object" ? d.target.y : nodes.find(n => n.id === d.target)?.y || 0;
+      const dx = tx - sx, dy = ty - sy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const tNode = nodes.find(n => n.id === (typeof d.target === "object" ? d.target.id : d.target));
+      const tR = tNode ? tNode.radius + 6 : 24;
+      const ratio = Math.max(0, (dist - tR) / dist);
+      const ex = sx + dx * ratio, ey = sy + dy * ratio;
+      const curv = d.isMutual ? 0.12 : 0.06;
+      const mx = (sx + ex) / 2 - dy * curv, my = (sy + ey) / 2 + dx * curv;
+      return `M${sx},${sy} Q${mx},${my} ${ex},${ey}`;
+    }
+
+    egoSimulation.on("tick", () => {
+      linkGroup.select("path").attr("d", buildEgoCurve);
+      node.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    /* Intro animation */
+    node.style("opacity", 0).transition().delay((d, i) => i * 50).duration(400).style("opacity", 1);
+    linkGroup.style("opacity", 0).transition().delay(300).duration(500).style("opacity", 1);
+  }
+
+  window.Sociogram = { renderSociogram, renderEgoSociogram };
 })();

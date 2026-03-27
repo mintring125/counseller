@@ -678,6 +678,17 @@ h1, h2, h3, p { margin: 0; }
   background: rgba(108, 92, 231, 0.05);
 }
 .profile-check-wrap { min-height: 360px; }
+/* Ego sociogram in profile */
+.ego-sociogram-stage {
+  min-height: 460px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.ego-sociogram-stage svg {
+  background: linear-gradient(145deg, rgba(108, 92, 231, 0.03), rgba(0, 206, 201, 0.03), rgba(255,255,255,0.5));
+  border: 1px solid rgba(108, 92, 231, 0.08);
+  border-radius: 20px;
+}
 /* Question Story — Redesigned */
 .question-story {
   display: grid;
