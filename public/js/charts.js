@@ -1,5 +1,11 @@
 (function chartsModule() {
   const { nominationQuestions, checkQuestions } = window.APP_DATA;
+  const climateLabelMap = {
+    c1: "친한 친구",
+    c2: "의지할 친구",
+    c3: "반에서 편안함",
+    c4: "친구들과 어울림"
+  };
   const typeLabels = {
     Popular: "관계 중심",
     Rejected: "갈등 주의",
@@ -29,6 +35,10 @@
     return Object.fromEntries(students.map((student) => [student.id, student]));
   }
 
+  function climateLabel(question) {
+    return climateLabelMap[question.id] || question.text;
+  }
+
   function renderDistribution(canvas, students, analysis) {
     destroyChart(distributionChart);
     distributionChart = new Chart(canvas, {
@@ -43,6 +53,17 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          duration: 900,
+          easing: "easeOutQuart"
+        },
+        animations: {
+          y: {
+            from(context) {
+              return context.chart?.scales?.y?.getPixelForValue(0) ?? 0;
+            }
+          }
+        },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
     });
@@ -53,7 +74,7 @@
     climateChart = new Chart(canvas, {
       type: "radar",
       data: {
-        labels: checkItems.map((question) => question.id.toUpperCase()),
+        labels: checkItems.map((question) => climateLabel(question)),
         datasets: [{
           label: "학급 평균",
           data: checkItems.map((question) => analysis.climateAverages[question.id]),
@@ -130,6 +151,94 @@
     return ids.map((id) => `
       <span class="mini-pill">${escapeHtml(lookup[id]?.name || `학생 ${id}`)}</span>
     `).join("");
+  }
+
+  function renderSignalChips(chips) {
+    if (!chips.length) {
+      return '<span class="signal-chip neutral">기본 프로필</span>';
+    }
+
+    return chips.map((chip) => `
+      <span class="signal-chip ${chip.tone || "neutral"}">${escapeHtml(chip.label)}</span>
+    `).join("");
+  }
+
+  function buildKeywordChips(metric, analysis, directConnections) {
+    const chips = [];
+    const thresholds = analysis.thresholds;
+    const peerValues = Object.values(metric.peerStats);
+    const topPositiveTarget = Math.max(0, ...peerValues.map((peer) => peer.positiveSent));
+    const focusRatio = metric.positiveSent ? topPositiveTarget / metric.positiveSent : 0;
+
+    chips.push({ label: typeLabels[metric.type] || metric.type, tone: "neutral" });
+    if (metric.positiveReceived >= thresholds.positiveTop) chips.push({ label: "긍정 중심", tone: "good" });
+    if (metric.mutuals.size >= 2) chips.push({ label: `상호 선택 ${metric.mutuals.size}`, tone: "good" });
+    if (metric.connectorScore >= 2) chips.push({ label: "브릿지", tone: "info" });
+    if (metric.negativeReceived >= thresholds.negativeTop) chips.push({ label: "갈등 신호", tone: "warn" });
+    if (metric.positiveReceived <= thresholds.positiveBottom) chips.push({ label: "고립 주의", tone: "warn" });
+    if (focusRatio >= 0.5 && metric.positiveSent >= 3) chips.push({ label: "관계 집중", tone: "warn" });
+    if (metric.checkAverage >= 4) chips.push({ label: "적응 안정", tone: "good" });
+    if (metric.checkAverage > 0 && metric.checkAverage <= 2.5) chips.push({ label: "정서 확인", tone: "warn" });
+    if (directConnections.length >= 5) chips.push({ label: "직접 연결 넓음", tone: "info" });
+    if (metric.incomingTextMentions.length || metric.ownTextNote) chips.push({ label: "서술 메모 있음", tone: "neutral" });
+    if (!metric.hasResponse) chips.push({ label: "미응답", tone: "warn" });
+
+    return chips.slice(0, 8);
+  }
+
+  function buildSpotlightCards(metric, analysis, directConnections) {
+    const thresholds = analysis.thresholds;
+    const peerValues = Object.values(metric.peerStats);
+    const topPositiveTarget = Math.max(0, ...peerValues.map((peer) => peer.positiveSent));
+    const focusRatio = metric.positiveSent ? topPositiveTarget / metric.positiveSent : 0;
+
+    let positionValue = typeLabels[metric.type] || metric.type;
+    let positionMeta = `긍정 ${metric.positiveReceived} · 부정 ${metric.negativeReceived}`;
+    if (metric.positiveReceived >= thresholds.positiveTop && metric.mutuals.size >= 2) {
+      positionValue = "핵심 안정권";
+    } else if (metric.negativeReceived >= thresholds.negativeTop) {
+      positionValue = "갈등 관찰권";
+    } else if (metric.positiveReceived <= thresholds.positiveBottom) {
+      positionValue = "연결 확장권";
+    }
+
+    let styleValue = "일반 연결형";
+    let styleMeta = `직접 연결 ${directConnections.length}명`;
+    if (metric.mutuals.size >= 2) {
+      styleValue = "상호 안정형";
+      styleMeta = `상호 선택 ${metric.mutuals.size}명`;
+    } else if (metric.connectorScore >= 2) {
+      styleValue = "브릿지형";
+      styleMeta = "여러 친구를 잇는 흐름";
+    } else if (focusRatio >= 0.5 && metric.positiveSent >= 3) {
+      styleValue = "집중 의존형";
+      styleMeta = "선택이 특정 친구에 집중";
+    } else if (directConnections.length <= 2) {
+      styleValue = "관계 축소형";
+      styleMeta = "직접 연결이 적은 편";
+    }
+
+    let counselingValue = "관찰 유지";
+    let counselingMeta = "현재 흐름을 안정적으로 유지";
+    if (metric.negativeReceived >= thresholds.negativeTop) {
+      counselingValue = "갈등 완충";
+      counselingMeta = "안전한 짝과 활동 조합 우선";
+    } else if (focusRatio >= 0.5 && metric.positiveSent >= 3) {
+      counselingValue = "관계 분산";
+      counselingMeta = "특정 친구 의존 줄이기";
+    } else if (metric.positiveReceived <= thresholds.positiveBottom) {
+      counselingValue = "연결 확장";
+      counselingMeta = "작은 성공 관계 늘리기";
+    } else if (metric.checkAverage > 0 && metric.checkAverage <= 2.5) {
+      counselingValue = "정서 확인";
+      counselingMeta = "요즘 불편함 먼저 듣기";
+    }
+
+    return [
+      { label: "관계 위치", value: positionValue, meta: positionMeta, tone: "neutral" },
+      { label: "연결 스타일", value: styleValue, meta: styleMeta, tone: "info" },
+      { label: "상담 초점", value: counselingValue, meta: counselingMeta, tone: counselingValue === "관찰 유지" ? "good" : "warn" }
+    ];
   }
 
   function renderQuestionRows(metric, lookup) {
@@ -302,6 +411,8 @@
       .filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((student) => ({ student, caption: "상호 선택 관계" }));
+    const keywordChips = buildKeywordChips(metric, analysis, directConnections);
+    const spotlightCards = buildSpotlightCards(metric, analysis, directConnections);
 
     return `
       <section class="profile-detail-shell ${focusMode ? "focus-mode" : ""}">
@@ -342,19 +453,38 @@
           </article>
         </div>
 
-        <div class="insight-grid">
-          <article class="insight-card">
+        <article class="keyword-board">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">Keywords</p>
+              <h4>핵심 키워드</h4>
+            </div>
+          </div>
+          <div class="signal-chip-row">${renderSignalChips(keywordChips)}</div>
+        </article>
+
+        <div class="spotlight-grid">
+          ${spotlightCards.map((card) => `
+            <article class="spotlight-card ${card.tone}">
+              <span class="spotlight-label">${escapeHtml(card.label)}</span>
+              <strong>${escapeHtml(card.value)}</strong>
+              <p>${escapeHtml(card.meta)}</p>
+            </article>
+          `).join("")}
+        </div>
+
+        <div class="insight-grid compact">
+          <article class="insight-card compact">
             <span class="note-label">핵심 해석</span>
-            <p>${escapeHtml(metric.summary.overview)}</p>
+            <strong>${escapeHtml(metric.summary.overview)}</strong>
           </article>
-          <article class="insight-card">
-            <span class="note-label">강점</span>
-            <div class="mini-pill-row">${metric.summary.strengths.length ? metric.summary.strengths.map((text) => `<span class="mini-pill strong">${escapeHtml(text)}</span>`).join("") : '<span class="mini-pill muted">뚜렷한 강점 신호가 더 쌓이면 표시됩니다.</span>'}</div>
+          <article class="insight-card compact">
+            <span class="note-label">강점 단어</span>
+            <div class="mini-pill-row">${metric.summary.strengths.length ? metric.summary.strengths.map((text) => `<span class="mini-pill strong">${escapeHtml(text)}</span>`).join("") : '<span class="mini-pill muted">강점 신호 대기</span>'}</div>
           </article>
-          <article class="insight-card">
-            <span class="note-label">지도 포인트</span>
-            <div class="mini-pill-row">${metric.summary.risks.length ? metric.summary.risks.map((text) => `<span class="mini-pill warn">${escapeHtml(text)}</span>`).join("") : '<span class="mini-pill good">현재 기준으로 큰 위험 신호는 없습니다.</span>'}</div>
-            <p class="insight-footnote">${escapeHtml(metric.summary.focus[0])}</p>
+          <article class="insight-card compact">
+            <span class="note-label">우선 확인</span>
+            <div class="mini-pill-row">${metric.summary.risks.length ? metric.summary.risks.map((text) => `<span class="mini-pill warn">${escapeHtml(text)}</span>`).join("") : '<span class="mini-pill good">큰 위험 신호 없음</span>'}</div>
           </article>
         </div>
 
