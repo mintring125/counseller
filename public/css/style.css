@@ -773,11 +773,118 @@ h1, h2, h3, p { margin: 0; }
   min-height: 460px;
   border-radius: 20px;
   overflow: hidden;
+  position: relative;
 }
 .ego-sociogram-stage svg {
   background: linear-gradient(145deg, rgba(108, 92, 231, 0.03), rgba(0, 206, 201, 0.03), rgba(255,255,255,0.5));
   border: 1px solid rgba(108, 92, 231, 0.08);
   border-radius: 20px;
+}
+/* Ego tooltip */
+.ego-tooltip {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.ego-tooltip-inner {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(108, 92, 231, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(31, 36, 51, 0.15);
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.ego-tooltip-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--primary);
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(108, 92, 231, 0.1);
+}
+.ego-tooltip-q {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(108, 92, 231, 0.06);
+}
+.ego-tooltip-q:last-child {
+  border-bottom: none;
+}
+.ego-tooltip-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(0, 184, 148, 0.12);
+  color: #007d65;
+}
+.ego-tooltip-q.neg .ego-tooltip-badge {
+  background: rgba(225, 112, 85, 0.12);
+  color: #a4462d;
+}
+.ego-tooltip-q.text .ego-tooltip-badge {
+  background: rgba(108, 92, 231, 0.1);
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+.ego-tooltip-q-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ego-tooltip-q-text {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+.ego-tooltip-names {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.84rem;
+}
+.ego-tooltip-reason {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.ego-tooltip-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 12px;
+}
+.ego-tooltip-section-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(108, 92, 231, 0.1);
+}
+.ego-tooltip-check {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 0.82rem;
+}
+.ego-tooltip-check span {
+  color: var(--text);
+}
+.ego-tooltip-check strong {
+  color: var(--primary);
+  font-weight: 800;
 }
 /* Question Story — Redesigned */
 .question-story {

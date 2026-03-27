@@ -178,7 +178,11 @@
     }
 
     function rerenderEgo() {
-      window.Sociogram.renderEgoSociogram(egoContainer, students, state.analysis, focusId, getEgoFilters());
+      window.Sociogram.renderEgoSociogram(egoContainer, students, state.analysis, focusId, getEgoFilters(), {
+        responses: state.responses,
+        nominationQuestions: nominationQuestions,
+        checkQuestions: checkQuestions
+      });
     }
 
     if (egoQuestionFilter) {

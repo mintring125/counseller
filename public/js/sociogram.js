@@ -607,7 +607,7 @@
   /* ───── Ego (personal) sociogram for student profile ───── */
   let egoSimulation = null;
 
-  function renderEgoSociogram(container, students, analysis, focusStudentId, filters) {
+  function renderEgoSociogram(container, students, analysis, focusStudentId, filters, options) {
     container.innerHTML = "";
     if (egoSimulation) {
       egoSimulation.stop();
@@ -615,6 +615,7 @@
     }
 
     const egoFilters = filters || { questionId: "all", showPositive: true, showNegative: true };
+    options = options || {};
 
     if (!analysis.edges.length) {
       container.innerHTML = '<div class="empty-state">응답이 쌓이면 개인 관계망이 여기에 표시됩니다.</div>';
@@ -854,12 +855,118 @@
         .attr("stroke-width", 1);
     });
 
-    /* Tooltip */
-    node.append("title")
-      .text(d => d.isFocus
-        ? `${d.name}\n${focusVisual.shortLabel}\n긍정 ${focusMetric.positiveReceived} / 부정 ${focusMetric.negativeReceived} / 상호 ${focusMetric.mutuals.size}`
-        : d.name
-      );
+    /* Rich tooltip for focus student — shows individual responses */
+    const tooltipDiv = d3.select(container).append("div")
+      .attr("class", "ego-tooltip")
+      .style("display", "none");
+
+    /* Build tooltip content from response data */
+    function buildTooltipContent() {
+      const response = (options.responses || []).find(r => r.respondentId === focusStudentId);
+      if (!response) return `<div class="ego-tooltip-inner"><p class="ego-tooltip-empty">이 학생은 아직 설문에 응답하지 않았습니다.</p></div>`;
+
+      const qList = options.nominationQuestions || [];
+      const studentLookup = {};
+      students.forEach(s => { studentLookup[s.id] = s.name; });
+
+      let html = '<div class="ego-tooltip-inner">';
+      html += `<div class="ego-tooltip-title">${response.respondentName || focusMetric.student.name}의 응답</div>`;
+
+      /* Nomination questions */
+      qList.forEach(q => {
+        const nom = response.nominations?.[q.id];
+        if (!nom) return;
+        const selected = nom.selected || [];
+        const reason = nom.reason || "";
+        if (!selected.length && !reason) return;
+        const isPositive = q.category === "positive";
+        const names = selected.map(id => studentLookup[id] || `학생 ${id}`).join(", ");
+        html += `<div class="ego-tooltip-q ${isPositive ? "pos" : "neg"}">`;
+        html += `<span class="ego-tooltip-badge">${q.id.toUpperCase()}</span>`;
+        html += `<div class="ego-tooltip-q-body">`;
+        html += `<span class="ego-tooltip-q-text">${q.text}</span>`;
+        if (selected.length) {
+          html += `<span class="ego-tooltip-names">${names}</span>`;
+        }
+        if (reason) {
+          html += `<span class="ego-tooltip-reason">💬 ${reason}</span>`;
+        }
+        html += `</div></div>`;
+      });
+
+      /* Text question (q12 or similar) */
+      const textQ = qList.find(q => q.category === "text");
+      if (textQ) {
+        const textNom = response.nominations?.[textQ.id];
+        const textVal = textNom?.text || "";
+        if (textVal) {
+          html += `<div class="ego-tooltip-q text">`;
+          html += `<span class="ego-tooltip-badge">📝</span>`;
+          html += `<div class="ego-tooltip-q-body">`;
+          html += `<span class="ego-tooltip-q-text">${textQ.text}</span>`;
+          html += `<span class="ego-tooltip-reason">${textVal}</span>`;
+          html += `</div></div>`;
+        }
+      }
+
+      /* Check items */
+      if (response.checkItems) {
+        const checkQ = options.checkQuestions || [];
+        if (checkQ.length) {
+          html += `<div class="ego-tooltip-section-title">자기 체크 문항</div>`;
+          checkQ.forEach(cq => {
+            const val = response.checkItems?.[cq.id];
+            if (val == null) return;
+            html += `<div class="ego-tooltip-check">`;
+            html += `<span>${cq.text}</span>`;
+            html += `<strong>${val}점</strong>`;
+            html += `</div>`;
+          });
+        }
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    const tooltipContent = buildTooltipContent();
+
+    focusNode
+      .on("mouseenter", function(event) {
+        tooltipDiv
+          .html(tooltipContent)
+          .style("display", "block");
+        /* Position near the node */
+        const rect = container.getBoundingClientRect();
+        const mx = event.clientX - rect.left;
+        const my = event.clientY - rect.top;
+        const tw = Math.min(380, container.clientWidth - 24);
+        let left = mx + 16;
+        if (left + tw > container.clientWidth) left = mx - tw - 16;
+        if (left < 8) left = 8;
+        tooltipDiv
+          .style("left", left + "px")
+          .style("top", Math.max(8, my - 20) + "px")
+          .style("max-width", tw + "px");
+      })
+      .on("mousemove", function(event) {
+        const rect = container.getBoundingClientRect();
+        const mx = event.clientX - rect.left;
+        const my = event.clientY - rect.top;
+        const tw = Math.min(380, container.clientWidth - 24);
+        let left = mx + 16;
+        if (left + tw > container.clientWidth) left = mx - tw - 16;
+        if (left < 8) left = 8;
+        tooltipDiv
+          .style("left", left + "px")
+          .style("top", Math.max(8, my - 20) + "px");
+      })
+      .on("mouseleave", function() {
+        tooltipDiv.style("display", "none");
+      });
+
+    /* Simple title tooltip for other nodes */
+    node.filter(d => !d.isFocus).append("title").text(d => d.name);
 
     /* Curved path */
     function buildEgoCurve(d) {
