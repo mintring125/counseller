@@ -69,7 +69,7 @@
     let overview = "학급 안에서 중간 수준의 관계 안정도를 보이는 학생입니다.";
 
     if (item.positiveReceived >= thresholds.positiveTop && item.mutuals.size >= 2) {
-      overview = "학급 안에서 신뢰와 친밀감이 함께 확인되는 중심권 학생입니다.";
+      overview = "학급 안에서 친구들이 많이 찾는 학생입니다.";
     } else if (item.positiveReceived >= thresholds.positiveTop) {
       overview = "여러 영역에서 자주 선택받는 학생입니다.";
     } else if (item.negativeReceived >= thresholds.negativeTop) {
@@ -82,7 +82,7 @@
       strengths.push("긍정 지명이 많은 편이라 또래 신뢰 기반이 있습니다.");
     }
     if (item.mutuals.size >= 2) {
-      strengths.push("상호 선택 관계가 여러 개 있어 안정적인 친밀권이 보입니다.");
+      strengths.push("서로 선택한 친구가 여러 명 있어 친한 관계가 안정적입니다.");
     }
     if (item.connectorScore >= 2 && item.positiveReceived >= thresholds.positiveUpperHalf) {
       strengths.push("여러 친구와 두루 연결되는 브릿지 역할 가능성이 있습니다.");

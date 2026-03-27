@@ -43,7 +43,7 @@
         radius,
         fill: "#f39c12",
         halo: "rgba(243, 156, 18, 0.18)",
-        shortLabel: "양가형"
+        shortLabel: "반응이 갈림"
       };
     }
 
@@ -88,7 +88,7 @@
         <span class="sociogram-legend-title">원 의미</span>
         <div class="sociogram-legend-row">
           <span class="sociogram-legend-chip"><span class="legend-dot positive"></span>긍정 중심</span>
-          <span class="sociogram-legend-chip"><span class="legend-dot mixed"></span>일반/양가형</span>
+          <span class="sociogram-legend-chip"><span class="legend-dot mixed"></span>보통/반응이 갈림</span>
           <span class="sociogram-legend-chip"><span class="legend-dot warn"></span>갈등 주의</span>
           <span class="sociogram-legend-chip"><span class="legend-dot low"></span>연결 적음</span>
         </div>
@@ -242,18 +242,26 @@
       .text((d) => d.name.slice(0, 1))
       .attr("text-anchor", "middle")
       .attr("dy", 5)
-      .attr("font-size", 16)
+      .attr("font-size", 17)
       .attr("font-weight", 800)
       .attr("fill", "#ffffff");
 
     const label = node.append("g")
       .attr("class", "sociogram-label")
-      .attr("transform", (d) => `translate(0, ${d.radius + 14})`);
+      .attr("transform", (d) => `translate(0, ${-(d.radius + 24)})`);
+
+    label.append("line")
+      .attr("x1", 0)
+      .attr("y1", (d) => d.radius + 8)
+      .attr("x2", 0)
+      .attr("y2", 10)
+      .attr("stroke", "rgba(31,36,51,0.18)")
+      .attr("stroke-width", 1.5);
 
     label.append("text")
       .text((d) => d.name)
       .attr("text-anchor", "middle")
-      .attr("font-size", 12)
+      .attr("font-size", 13)
       .attr("font-weight", 700)
       .attr("fill", "#1f2433")
       .attr("dy", 4);
@@ -269,8 +277,9 @@
         .attr("width", bbox.width + 20)
         .attr("height", bbox.height + 12)
         .attr("rx", 12)
-        .attr("fill", "rgba(255,255,255,0.92)")
-        .attr("stroke", "rgba(108,92,231,0.14)");
+        .attr("fill", "rgba(255,255,255,0.96)")
+        .attr("stroke", "rgba(108,92,231,0.18)")
+        .attr("stroke-width", 1.2);
     });
 
     node.append("title")

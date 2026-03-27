@@ -309,11 +309,28 @@ h1, h2, h3, p { margin: 0; }
   padding: 20px;
   position: sticky;
   top: 18px;
+  max-height: calc(100vh - 36px);
+  overflow: hidden;
+  align-self: start;
 }
 .profile-selector-list {
   display: grid;
   gap: 12px;
   margin-top: 14px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.profile-selector-list::-webkit-scrollbar {
+  width: 10px;
+}
+.profile-selector-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(108, 92, 231, 0.22);
+}
+.profile-selector-list::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(108, 92, 231, 0.06);
 }
 .profile-selector-card {
   width: 100%;
@@ -638,7 +655,8 @@ h1, h2, h3, p { margin: 0; }
   .sociogram-stage { min-height: 520px; }
   .launch-grid { grid-template-columns: 1fr; }
   .profile-workspace { grid-template-columns: 1fr; }
-  .profile-selector-panel { position: static; }
+  .profile-selector-panel { position: static; max-height: none; overflow: visible; }
+  .profile-selector-list { max-height: none; overflow: visible; padding-right: 0; }
   .profile-detail-shell { padding: 18px; }
   .profile-detail-hero, .profile-detail-actions, .question-story-grid { flex-direction: column; align-items: flex-start; }
   .profile-check-wrap { min-height: 300px; }

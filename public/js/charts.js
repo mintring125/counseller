@@ -7,11 +7,11 @@
     c4: "친구들과 어울림"
   };
   const typeLabels = {
-    Popular: "관계 중심",
-    Rejected: "갈등 주의",
-    Controversial: "양가형",
-    Neglected: "고립 주의",
-    Average: "일반권"
+    Popular: "인기 많음",
+    Rejected: "걱정 필요",
+    Controversial: "반응이 갈림",
+    Neglected: "관계가 적음",
+    Average: "보통"
   };
 
   let distributionChart;
@@ -238,26 +238,26 @@
     let positionValue = typeLabels[metric.type] || metric.type;
     let positionMeta = `긍정 ${metric.positiveReceived} · 부정 ${metric.negativeReceived}`;
     if (metric.positiveReceived >= thresholds.positiveTop && metric.mutuals.size >= 2) {
-      positionValue = "핵심 안정권";
+      positionValue = "친구들이 많이 찾음";
     } else if (metric.negativeReceived >= thresholds.negativeTop) {
-      positionValue = "갈등 관찰권";
+      positionValue = "걱정이 보임";
     } else if (metric.positiveReceived <= thresholds.positiveBottom) {
-      positionValue = "연결 확장권";
+      positionValue = "관계가 적은 편";
     }
 
-    let styleValue = "일반 연결형";
+    let styleValue = "보통";
     let styleMeta = `직접 연결 ${directConnections.length}명`;
     if (metric.mutuals.size >= 2) {
-      styleValue = "상호 안정형";
+      styleValue = "서로 친함";
       styleMeta = `상호 선택 ${metric.mutuals.size}명`;
     } else if (metric.connectorScore >= 2) {
-      styleValue = "브릿지형";
+      styleValue = "여러 친구와 어울림";
       styleMeta = "여러 친구를 잇는 흐름";
     } else if (focusRatio >= 0.5 && metric.positiveSent >= 3) {
-      styleValue = "집중 의존형";
+      styleValue = "한 친구에게 집중";
       styleMeta = "선택이 특정 친구에 집중";
     } else if (directConnections.length <= 2) {
-      styleValue = "관계 축소형";
+      styleValue = "관계가 적음";
       styleMeta = "직접 연결이 적은 편";
     }
 
@@ -270,7 +270,7 @@
       counselingValue = "관계 분산";
       counselingMeta = "특정 친구 의존 줄이기";
     } else if (metric.positiveReceived <= thresholds.positiveBottom) {
-      counselingValue = "연결 확장";
+      counselingValue = "친구 연결 넓히기";
       counselingMeta = "작은 성공 관계 늘리기";
     } else if (metric.checkAverage > 0 && metric.checkAverage <= 2.5) {
       counselingValue = "정서 확인";
@@ -471,7 +471,7 @@
           </div>
           <div class="profile-detail-actions">
             ${focusMode ? '<button type="button" class="ghost-button" data-exit-focus>학생 목록 보기</button>' : '<button type="button" class="primary-button" data-enter-focus>개별 상담 모드</button>'}
-            <span class="pill ${metric.needsAttention ? "alert" : "good"}">${metric.needsAttention ? "관심 필요" : "안정권"}</span>
+            <span class="pill ${metric.needsAttention ? "alert" : "good"}">${metric.needsAttention ? "관심 필요" : "안정"}</span>
           </div>
         </div>
 
