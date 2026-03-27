@@ -114,7 +114,7 @@
     });
 
     const climateAverages = Object.fromEntries(checkQuestions.map((question) => {
-      const values = responses.map((response) => Number(response.checkItems[question.id] || 0)).filter(Boolean);
+      const values = responses.map((response) => Number((response.checkItems || {})[question.id] || 0)).filter(Boolean);
       const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
       return [question.id, average];
     }));
