@@ -7,7 +7,7 @@
 
   nominationQuestions.forEach((question) => {
     state.nominations[question.id] =
-      question.category === "text" ? { text: "" } : { selected: [], reason: "", reasonDrawing: "" };
+      question.category === "text" ? { text: "" } : { selected: [], reason: "" };
   });
   checkQuestions.forEach((question) => { state.checkItems[question.id] = null; });
 
@@ -27,8 +27,7 @@
     const question = currentQuestion();
     if (!question) return false;
     if (question.id.startsWith("q")) {
-      const answer = state.nominations[question.id];
-      return question.category === "text" ? answer.text.trim().length > 0 : true;
+      return true;
     }
     return Boolean(state.checkItems[question.id]);
   }
@@ -58,91 +57,8 @@
   function updateReason(questionId, value) { state.nominations[questionId].reason = value; }
   function updateText(questionId, value) { state.nominations[questionId].text = value; }
   function updateLikert(questionId, value) { state.checkItems[questionId] = Number(value); render(); }
-  function updateReasonDrawing(questionId, value) { state.nominations[questionId].reasonDrawing = value; }
   function goNext() { if (state.currentStep < nominationQuestions.length + checkQuestions.length - 1) { state.currentStep += 1; render(); } }
   function goPrev() { if (state.currentStep > 0) { state.currentStep -= 1; render(); } }
-
-  function setupReasonCanvas(questionId, canvas) {
-    const context = canvas.getContext("2d");
-    let drawing = false;
-
-    function resizeCanvas() {
-      const ratio = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      const snapshot = state.nominations[questionId].reasonDrawing;
-      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
-      context.setTransform(1, 0, 0, 1, 0, 0);
-      context.scale(ratio, ratio);
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.strokeStyle = "#1f2433";
-      context.lineWidth = 2.5;
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, rect.width, rect.height);
-
-      if (snapshot) {
-        const image = new Image();
-        image.onload = () => {
-          context.drawImage(image, 0, 0, rect.width, rect.height);
-        };
-        image.src = snapshot;
-      }
-    }
-
-    function pointFromEvent(event) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      };
-    }
-
-    function saveDrawing() {
-      updateReasonDrawing(questionId, canvas.toDataURL("image/png"));
-    }
-
-    canvas.addEventListener("pointerdown", (event) => {
-      drawing = true;
-      const point = pointFromEvent(event);
-      context.beginPath();
-      context.moveTo(point.x, point.y);
-      canvas.setPointerCapture(event.pointerId);
-    });
-
-    canvas.addEventListener("pointermove", (event) => {
-      if (!drawing) return;
-      const point = pointFromEvent(event);
-      context.lineTo(point.x, point.y);
-      context.stroke();
-    });
-
-    function stopDrawing(event) {
-      if (!drawing) return;
-      drawing = false;
-      context.closePath();
-      saveDrawing();
-      if (event && typeof canvas.releasePointerCapture === "function") {
-        try {
-          canvas.releasePointerCapture(event.pointerId);
-        } catch (_error) {
-        }
-      }
-    }
-
-    canvas.addEventListener("pointerup", stopDrawing);
-    canvas.addEventListener("pointerleave", stopDrawing);
-    canvas.addEventListener("pointercancel", stopDrawing);
-
-    resizeCanvas();
-
-    return {
-      clear() {
-        updateReasonDrawing(questionId, "");
-        resizeCanvas();
-      }
-    };
-  }
 
   async function submitSurvey() {
     state.loading = true;
@@ -224,11 +140,6 @@
           </div>
           <label class="helper-text">이유</label>
           <textarea class="reason-box" placeholder="필요하면 짧게 이유를 적어 주세요.">${answer.reason}</textarea>
-          <div class="drawing-head">
-            <span class="helper-text">간단한 그림 또는 표시</span>
-            <button type="button" class="ghost-button drawing-clear" id="clear-drawing-button">지우기</button>
-          </div>
-          <canvas class="reason-canvas" id="reason-canvas"></canvas>
         </div>
         <div class="actions-row">
           <button class="ghost-button" id="prev-button" ${state.currentStep === 0 ? "disabled" : ""}>이전</button>
@@ -240,8 +151,6 @@
       button.addEventListener("click", () => toggleSelection(question.id, Number(button.dataset.studentId)));
     });
     root.querySelector(".reason-box").addEventListener("input", (event) => updateReason(question.id, event.target.value));
-    const canvasApi = setupReasonCanvas(question.id, root.querySelector("#reason-canvas"));
-    root.querySelector("#clear-drawing-button").addEventListener("click", () => canvasApi.clear());
     root.querySelector("#prev-button").addEventListener("click", goPrev);
     root.querySelector("#next-button").addEventListener("click", goNext);
   }
@@ -263,19 +172,16 @@
           </div>
         </div>
         <div class="question-panel">
-          <p class="helper-text">친구 관계 중 선생님이 더 살펴보면 좋겠다고 생각하는 내용을 적어 주세요.</p>
-          <textarea class="text-answer" placeholder="예: OO와 OO가 요즘 같이 잘 안 놀아요.">${answer.text}</textarea>
+          <p class="helper-text">필요하면 적어 주세요. 이름은 적지 않아도 되고, 비워 두고 다음으로 넘어가도 됩니다.</p>
+          <textarea class="text-answer" placeholder="예: 요즘 조금 어색한 분위기가 있어요.">${answer.text}</textarea>
         </div>
         <div class="actions-row">
           <button class="ghost-button" id="prev-button">이전</button>
-          <button class="primary-button" id="next-button" ${canProceed() ? "" : "disabled"}>다음</button>
+          <button class="primary-button" id="next-button">다음</button>
         </div>
       </section>
     `;
-    root.querySelector(".text-answer").addEventListener("input", (event) => {
-      updateText(question.id, event.target.value);
-      root.querySelector("#next-button").disabled = !canProceed();
-    });
+    root.querySelector(".text-answer").addEventListener("input", (event) => updateText(question.id, event.target.value));
     root.querySelector("#prev-button").addEventListener("click", goPrev);
     root.querySelector("#next-button").addEventListener("click", goNext);
   }
