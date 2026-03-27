@@ -135,8 +135,8 @@
       <div class="peer-card-list">
         ${items.map((item) => `
           <div class="peer-card ${tone}">
-            <strong>${escapeHtml(item.student.name)}</strong>
-            <span>${item.captionHtml || escapeHtml(item.caption)}</span>
+            <strong class="peer-name">${escapeHtml(item.student.name)}</strong>
+            <div class="peer-flow-tags">${item.captionHtml || escapeHtml(item.caption)}</div>
           </div>
         `).join("")}
       </div>
@@ -299,30 +299,41 @@
           return "";
         }
 
-        const sentLabel = isPositive ? "이 학생이 선택한 친구" : "이 학생이 불편하다고 응답한 친구";
-        const receivedLabel = isPositive ? "이 학생을 선택한 친구" : "이 학생을 불편하다고 응답한 친구";
+        const totalLinks = sentIds.length + receivedIds.length;
+        const sentArrow = isPositive ? "→" : "→";
+        const receivedArrow = isPositive ? "←" : "←";
+        const sentLabel = isPositive ? "선택한 친구" : "불편하다고 응답한 친구";
+        const receivedLabel = isPositive ? "선택받은 친구" : "불편하다고 응답받은 친구";
+        const toneClass = isPositive ? "positive" : "negative";
+
         return `
-          <article class="question-story ${isPositive ? "positive" : "negative"}">
-            <div class="question-story-head">
-              <span class="question-badge ${isPositive ? "positive" : "negative"}">${escapeHtml(question.id.toUpperCase())}</span>
-              <div>
+          <article class="question-story ${toneClass}">
+            <div class="qs-header">
+              <span class="question-badge ${toneClass}">${escapeHtml(question.id.toUpperCase())}</span>
+              <div class="qs-header-text">
                 <strong>${escapeHtml(question.text)}</strong>
-                <p class="muted">${sentIds.length + receivedIds.length}개의 직접 연결이 잡혔습니다.</p>
+                <span class="qs-link-count">${totalLinks}개 연결</span>
               </div>
             </div>
-            <div class="question-story-grid">
-              <div class="question-story-block">
-                <span class="story-label">${sentLabel}</span>
-                ${renderComparePills(sentIds.length, questionBenchmark.sentAverage, isPositive ? false : true)}
-                <div class="mini-pill-row">${renderNamePills(sentIds, lookup, "없음")}</div>
+            <div class="qs-body">
+              <div class="qs-direction-card">
+                <div class="qs-dir-header">
+                  <span class="qs-dir-arrow sent ${toneClass}">${sentArrow}</span>
+                  <span class="qs-dir-label">${sentLabel}</span>
+                  <span class="qs-dir-count">${sentIds.length}명</span>
+                </div>
+                <div class="qs-dir-names">${renderNamePills(sentIds, lookup, "없음")}</div>
               </div>
-              <div class="question-story-block">
-                <span class="story-label">${receivedLabel}</span>
-                ${renderComparePills(receivedIds.length, questionBenchmark.receivedAverage, isPositive ? false : true)}
-                <div class="mini-pill-row">${renderNamePills(receivedIds, lookup, "없음")}</div>
+              <div class="qs-direction-card">
+                <div class="qs-dir-header">
+                  <span class="qs-dir-arrow received ${toneClass}">${receivedArrow}</span>
+                  <span class="qs-dir-label">${receivedLabel}</span>
+                  <span class="qs-dir-count">${receivedIds.length}명</span>
+                </div>
+                <div class="qs-dir-names">${renderNamePills(receivedIds, lookup, "없음")}</div>
               </div>
             </div>
-            ${reasonEntry ? `<p class="question-reason">응답 메모: ${escapeHtml(reasonEntry.text)}</p>` : ""}
+            ${reasonEntry ? `<div class="qs-reason"><span class="qs-reason-icon">💬</span> ${escapeHtml(reasonEntry.text)}</div>` : ""}
           </article>
         `;
       })
@@ -424,13 +435,17 @@
       .filter((item) => item.total > 0 || metric.relatedStudents.has(item.student.id))
       .sort((a, b) => b.total - a.total || a.student.name.localeCompare(b.student.name))
       .map((item) => {
-        const captionParts = [];
-        if (item.positiveReceived) captionParts.push(`받은 <span class="relation-word positive">긍정</span> ${item.positiveReceived}`);
-        if (item.positiveSent) captionParts.push(`보낸 <span class="relation-word positive">긍정</span> ${item.positiveSent}`);
-        if (item.negativeReceived) captionParts.push(`받은 <span class="relation-word negative">부정</span> ${item.negativeReceived}`);
-        if (item.negativeSent) captionParts.push(`보낸 <span class="relation-word negative">부정</span> ${item.negativeSent}`);
-        if (!captionParts.length) captionParts.push("서술 메모 연결");
-        return { student: item.student, captionHtml: captionParts.join(" · "), caption: "" };
+        const isMutual = metric.mutuals.has(item.student.id);
+        const tags = [];
+        if (isMutual) {
+          tags.push(`<span class="flow-tag mutual"><span class="flow-arrow">⟷</span> 상호선택</span>`);
+        }
+        if (item.positiveReceived) tags.push(`<span class="flow-tag received positive"><span class="flow-arrow">←</span> 긍정 ${item.positiveReceived}</span>`);
+        if (item.positiveSent) tags.push(`<span class="flow-tag sent positive"><span class="flow-arrow">→</span> 긍정 ${item.positiveSent}</span>`);
+        if (item.negativeReceived) tags.push(`<span class="flow-tag received negative"><span class="flow-arrow">←</span> 부정 ${item.negativeReceived}</span>`);
+        if (item.negativeSent) tags.push(`<span class="flow-tag sent negative"><span class="flow-arrow">→</span> 부정 ${item.negativeSent}</span>`);
+        if (!tags.length) tags.push(`<span class="flow-tag memo">📝 서술 메모 연결</span>`);
+        return { student: item.student, captionHtml: tags.join(""), caption: "" };
       });
     const topIncoming = peerTotals
       .filter((item) => item.positiveReceived > 0)
