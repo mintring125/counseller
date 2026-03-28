@@ -860,7 +860,7 @@
       .attr("class", "ego-tooltip")
       .style("display", "none");
 
-    /* Build tooltip content from response data */
+    /* Build tooltip content based on current filter */
     function buildTooltipContent() {
       const response = (options.responses || []).find(r => r.respondentId === focusStudentId);
       if (!response) return `<div class="ego-tooltip-inner"><p class="ego-tooltip-empty">이 학생은 아직 설문에 응답하지 않았습니다.</p></div>`;
@@ -868,60 +868,43 @@
       const qList = options.nominationQuestions || [];
       const studentLookup = {};
       students.forEach(s => { studentLookup[s.id] = s.name; });
+      const activeQ = egoFilters.questionId;
 
       let html = '<div class="ego-tooltip-inner">';
       html += `<div class="ego-tooltip-title">${response.respondentName || focusMetric.student.name}의 응답</div>`;
 
-      /* Nomination questions */
-      qList.forEach(q => {
-        const nom = response.nominations?.[q.id];
-        if (!nom) return;
-        const selected = nom.selected || [];
-        const reason = nom.reason || "";
-        if (!selected.length && !reason) return;
-        const isPositive = q.category === "positive";
-        const names = selected.map(id => studentLookup[id] || `학생 ${id}`).join(", ");
-        html += `<div class="ego-tooltip-q ${isPositive ? "pos" : "neg"}">`;
-        html += `<span class="ego-tooltip-badge">${q.id.toUpperCase()}</span>`;
-        html += `<div class="ego-tooltip-q-body">`;
-        html += `<span class="ego-tooltip-q-text">${q.text}</span>`;
-        if (selected.length) {
-          html += `<span class="ego-tooltip-names">${names}</span>`;
-        }
-        if (reason) {
-          html += `<span class="ego-tooltip-reason">💬 ${reason}</span>`;
-        }
-        html += `</div></div>`;
-      });
+      if (activeQ === "all") {
+        /* ── 전체 문항 선택 시: 긍정/부정 응답 수만 표시 ── */
+        html += `<div class="ego-tooltip-summary">`;
+        html += `<div class="ego-tooltip-summary-row pos"><span class="ego-tooltip-summary-label">긍정 지명 받음</span><strong>${focusMetric.positiveReceived}</strong></div>`;
+        html += `<div class="ego-tooltip-summary-row pos"><span class="ego-tooltip-summary-label">긍정 지명 보냄</span><strong>${focusMetric.positiveSent}</strong></div>`;
+        html += `<div class="ego-tooltip-summary-row neg"><span class="ego-tooltip-summary-label">부정 지명 받음</span><strong>${focusMetric.negativeReceived}</strong></div>`;
+        html += `<div class="ego-tooltip-summary-row neg"><span class="ego-tooltip-summary-label">부정 지명 보냄</span><strong>${focusMetric.negativeSent}</strong></div>`;
+        html += `<div class="ego-tooltip-summary-row mutual"><span class="ego-tooltip-summary-label">상호 선택</span><strong>${focusMetric.mutuals.size}</strong></div>`;
+        html += `</div>`;
+      } else {
+        /* ── 특정 문항 선택 시: 해당 문항 응답만 표시 ── */
+        const q = qList.find(item => item.id === activeQ);
+        if (q) {
+          const nom = response.nominations?.[q.id];
+          const selected = nom?.selected || [];
+          const reason = nom?.reason || "";
+          const isPositive = q.category === "positive";
+          const names = selected.map(id => studentLookup[id] || `학생 ${id}`).join(", ");
 
-      /* Text question (q12 or similar) */
-      const textQ = qList.find(q => q.category === "text");
-      if (textQ) {
-        const textNom = response.nominations?.[textQ.id];
-        const textVal = textNom?.text || "";
-        if (textVal) {
-          html += `<div class="ego-tooltip-q text">`;
-          html += `<span class="ego-tooltip-badge">📝</span>`;
+          html += `<div class="ego-tooltip-q ${isPositive ? "pos" : "neg"}">`;
+          html += `<span class="ego-tooltip-badge">${q.id.toUpperCase()}</span>`;
           html += `<div class="ego-tooltip-q-body">`;
-          html += `<span class="ego-tooltip-q-text">${textQ.text}</span>`;
-          html += `<span class="ego-tooltip-reason">${textVal}</span>`;
+          html += `<span class="ego-tooltip-q-text">${q.text}</span>`;
+          if (selected.length) {
+            html += `<span class="ego-tooltip-names">${names}</span>`;
+          } else {
+            html += `<span class="ego-tooltip-names" style="color:var(--muted)">선택 없음</span>`;
+          }
+          if (reason) {
+            html += `<span class="ego-tooltip-reason">💬 ${reason}</span>`;
+          }
           html += `</div></div>`;
-        }
-      }
-
-      /* Check items */
-      if (response.checkItems) {
-        const checkQ = options.checkQuestions || [];
-        if (checkQ.length) {
-          html += `<div class="ego-tooltip-section-title">자기 체크 문항</div>`;
-          checkQ.forEach(cq => {
-            const val = response.checkItems?.[cq.id];
-            if (val == null) return;
-            html += `<div class="ego-tooltip-check">`;
-            html += `<span>${cq.text}</span>`;
-            html += `<strong>${val}점</strong>`;
-            html += `</div>`;
-          });
         }
       }
 
@@ -929,12 +912,12 @@
       return html;
     }
 
-    const tooltipContent = buildTooltipContent();
+    /* Tooltip content is rebuilt each hover (since filter can change) */
 
     focusNode
       .on("mouseenter", function(event) {
         tooltipDiv
-          .html(tooltipContent)
+          .html(buildTooltipContent())
           .style("display", "block");
         /* Position near the node */
         const rect = container.getBoundingClientRect();

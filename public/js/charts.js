@@ -90,9 +90,24 @@
     });
   }
 
-  function renderMatrix(container, students, analysis) {
-    const head = students.map((student) => `<th>${escapeHtml(student.name)}</th>`).join("");
-    const rows = students.map((source) => {
+  function renderMatrix(container, students, analysis, options = {}) {
+    const selectedStudentId = options.selectedStudentId ?? null;
+    const selectedStudent = students.find((student) => student.id === selectedStudentId) || null;
+    const visibleRows = selectedStudent ? students.filter((student) => student.id === selectedStudent.id) : students;
+    const head = students.map((student) => {
+      const isActive = student.id === selectedStudentId;
+      return `
+        <th>
+          <button
+            type="button"
+            class="matrix-student-button ${isActive ? "active" : ""}"
+            data-matrix-student-id="${student.id}"
+            aria-pressed="${isActive ? "true" : "false"}"
+          >${escapeHtml(student.name)}</button>
+        </th>
+      `;
+    }).join("");
+    const rows = visibleRows.map((source) => {
       const cells = students.map((target) => {
         const value = analysis.matrix[source.id][target.id];
         const color =
@@ -101,9 +116,44 @@
               : "rgba(108,92,231,0.04)";
         return `<td style="background:${color}">${value === 0 ? "" : value}</td>`;
       }).join("");
-      return `<tr><th>${escapeHtml(source.name)}</th>${cells}</tr>`;
+      return `
+        <tr>
+          <th class="matrix-row-head">
+            <button
+              type="button"
+              class="matrix-student-button matrix-row-button ${source.id === selectedStudentId ? "active" : ""}"
+              data-matrix-student-id="${source.id}"
+              aria-pressed="${source.id === selectedStudentId ? "true" : "false"}"
+            >${escapeHtml(source.name)}</button>
+          </th>
+          ${cells}
+        </tr>
+      `;
     }).join("");
-    container.innerHTML = `<table class="matrix-table"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+    const summary = selectedStudent
+      ? `
+        <div class="matrix-toolbar">
+          <span class="mini-pill">행 표시: ${escapeHtml(selectedStudent.name)}</span>
+          <button type="button" class="ghost-button matrix-clear-button" data-clear-matrix-filter>전체 보기</button>
+        </div>
+      `
+      : `
+        <div class="matrix-toolbar">
+          <span class="mini-pill muted">이름을 누르면 해당 학생 행만 볼 수 있습니다.</span>
+        </div>
+      `;
+    container.innerHTML = `
+      ${summary}
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th class="matrix-corner-cell"></th>
+            ${head}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
   }
 
   function collectPeerTotals(metric, students) {

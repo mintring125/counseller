@@ -10,6 +10,7 @@
     status: null,
     analysis: null,
     selectedStudentId: students[0]?.id || null,
+    matrixRowStudentId: null,
     profileFocusMode: false,
     filters: { showPositive: true, showNegative: true, questionId: "all" }
   };
@@ -68,6 +69,7 @@
     state.responses = await surveyResponse.json();
     state.analysis = window.Analysis.analyzeResponses(state.responses);
     syncSelectedStudent();
+    syncMatrixStudent();
     renderDashboard();
   }
 
@@ -75,6 +77,13 @@
     const validIds = new Set(students.map((student) => student.id));
     if (state.selectedStudentId && validIds.has(state.selectedStudentId)) return;
     state.selectedStudentId = state.responses[0]?.respondentId || students[0]?.id || null;
+  }
+
+  function syncMatrixStudent() {
+    const validIds = new Set(students.map((student) => student.id));
+    if (state.matrixRowStudentId && !validIds.has(state.matrixRowStudentId)) {
+      state.matrixRowStudentId = null;
+    }
   }
 
   function renderStats() {
@@ -103,11 +112,33 @@
         renderProfilesPanel();
       }
     });
-    window.DashboardCharts.renderMatrix(matrixContainer, students, state.analysis);
+    renderMatrixPanel();
     renderProfilesPanel();
     window.DashboardCharts.renderDistribution(distributionCanvas, students, state.analysis);
     window.DashboardCharts.renderClimate(climateCanvas, checkQuestions, state.analysis);
     window.DashboardCharts.renderAttention(attentionList, students, state.analysis);
+  }
+
+  function renderMatrixPanel() {
+    window.DashboardCharts.renderMatrix(matrixContainer, students, state.analysis, {
+      selectedStudentId: state.matrixRowStudentId
+    });
+
+    matrixContainer.querySelectorAll("[data-matrix-student-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const studentId = Number(button.dataset.matrixStudentId);
+        state.matrixRowStudentId = state.matrixRowStudentId === studentId ? null : studentId;
+        renderMatrixPanel();
+      });
+    });
+
+    const clearButton = matrixContainer.querySelector("[data-clear-matrix-filter]");
+    if (clearButton) {
+      clearButton.addEventListener("click", () => {
+        state.matrixRowStudentId = null;
+        renderMatrixPanel();
+      });
+    }
   }
 
   function renderProfilesPanel() {

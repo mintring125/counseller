@@ -315,8 +315,40 @@ h1, h2, h3, p { margin: 0; }
   font-family: "Pretendard", sans-serif;
 }
 .matrix-stage { overflow: auto; }
+.matrix-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
 .matrix-table { width: 100%; border-collapse: collapse; }
 .matrix-table th, .matrix-table td { min-width: 44px; padding: 10px; border: 1px solid rgba(108, 92, 231, 0.12); text-align: center; font-size: 0.86rem; }
+.matrix-corner-cell { background: rgba(108, 92, 231, 0.04); }
+.matrix-row-head { background: #fffdf9; position: sticky; left: 0; z-index: 1; }
+.matrix-student-button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.matrix-student-button:hover {
+  background: rgba(108, 92, 231, 0.12);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+.matrix-student-button.active {
+  background: rgba(108, 92, 231, 0.16);
+  color: var(--primary);
+}
+.matrix-row-button { text-align: left; }
+.matrix-clear-button { padding: 8px 14px; white-space: nowrap; }
 .profile-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
 .profile-card { display: grid; gap: 12px; }
 .profile-tags, .attention-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1043,12 +1075,220 @@ h1, h2, h3, p { margin: 0; }
 .canvas-wrap { position: relative; min-height: 320px; }
 .empty-state { padding: 32px; border-radius: 24px; text-align: center; background: rgba(108, 92, 231, 0.05); color: var(--muted); }
 
+/* ── Ego sociogram in profile ── */
+.ego-panel-card .panel-title-row {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ego-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ego-question-select {
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(108, 92, 231, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  max-width: 280px;
+}
+.ego-question-select:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.ego-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(108, 92, 231, 0.06);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.ego-toggle:hover {
+  background: rgba(108, 92, 231, 0.12);
+}
+.ego-toggle input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+.ego-sociogram-stage {
+  min-height: 460px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+}
+.ego-sociogram-stage svg {
+  background: linear-gradient(145deg, rgba(108, 92, 231, 0.03), rgba(0, 206, 201, 0.03), rgba(255,255,255,0.5));
+  border: 1px solid rgba(108, 92, 231, 0.08);
+  border-radius: 20px;
+}
+
+/* ── Ego tooltip ── */
+.ego-tooltip {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.ego-tooltip-inner {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(108, 92, 231, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(31, 36, 51, 0.15);
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.ego-tooltip-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--primary);
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(108, 92, 231, 0.1);
+}
+.ego-tooltip-q {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(108, 92, 231, 0.06);
+}
+.ego-tooltip-q:last-child {
+  border-bottom: none;
+}
+.ego-tooltip-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(0, 184, 148, 0.12);
+  color: #007d65;
+}
+.ego-tooltip-q.neg .ego-tooltip-badge {
+  background: rgba(225, 112, 85, 0.12);
+  color: #a4462d;
+}
+.ego-tooltip-q.text .ego-tooltip-badge {
+  background: rgba(108, 92, 231, 0.1);
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+.ego-tooltip-q-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ego-tooltip-q-text {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+.ego-tooltip-names {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.84rem;
+}
+.ego-tooltip-reason {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.ego-tooltip-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 12px;
+}
+/* Summary mode (전체 문항) */
+.ego-tooltip-summary {
+  display: grid;
+  gap: 4px;
+}
+.ego-tooltip-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+.ego-tooltip-summary-row.pos {
+  background: rgba(0, 184, 148, 0.08);
+}
+.ego-tooltip-summary-row.neg {
+  background: rgba(225, 112, 85, 0.08);
+}
+.ego-tooltip-summary-row.mutual {
+  background: rgba(249, 168, 37, 0.1);
+}
+.ego-tooltip-summary-label {
+  font-weight: 700;
+  color: var(--text);
+}
+.ego-tooltip-summary-row strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+.ego-tooltip-summary-row.neg strong {
+  color: #a4462d;
+}
+.ego-tooltip-summary-row.mutual strong {
+  color: #b8860b;
+}
+
+/* ── Fullscreen focus mode ── */
+.profile-detail-shell.focus-mode {
+  max-width: 100%;
+  margin: 0 auto;
+  background: #ffffff;
+  min-height: 100vh;
+  overflow-y: auto;
+  padding: 36px 48px;
+}
+.profile-detail-shell:fullscreen {
+  background: #ffffff;
+  overflow-y: auto;
+  padding: 40px 56px;
+}
+.profile-detail-shell:fullscreen .profile-detail-hero h3 { font-size: 2.2rem; }
+.profile-detail-shell:fullscreen .detail-stat-card strong { font-size: 2.4rem; }
+.profile-detail-shell:fullscreen .stat-label,
+.profile-detail-shell:fullscreen .eyebrow { font-size: 0.95rem; }
+.profile-detail-shell:fullscreen h4 { font-size: 1.3rem; }
+.profile-detail-shell:fullscreen .peer-name { font-size: 1.15rem; }
+.profile-detail-shell:fullscreen .flow-tag { font-size: 0.9rem; padding: 6px 14px; }
+.profile-detail-shell:fullscreen .ego-sociogram-stage { min-height: 560px; }
+.profile-detail-shell:fullscreen .signal-chip { font-size: 1.05rem; padding: 12px 18px; }
+.profile-detail-shell:fullscreen .spotlight-card strong { font-size: 1.35rem; }
+.profile-detail-shell:fullscreen .insight-card.compact strong { font-size: 1.15rem; }
+
 @media (max-width: 768px) {
   .survey-card, .launch-card, .admin-header, .toolbar-card, .panel-card, .auth-card, .stat-card { padding: 18px; border-radius: 24px; }
   .admin-header, .actions-row, .progress-meta { align-items: flex-start; flex-direction: column; }
   .likert-scale { grid-template-columns: 1fr; }
   .sociogram-stage { min-height: 520px; }
   .launch-grid { grid-template-columns: 1fr; }
+  .matrix-toolbar { flex-direction: column; align-items: flex-start; }
   .profile-workspace { grid-template-columns: 1fr; }
   .profile-selector-panel { position: static; max-height: none; overflow: visible; }
   .profile-selector-list { max-height: none; overflow: visible; padding-right: 0; }

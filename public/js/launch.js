@@ -19,21 +19,17 @@
             <a class="primary-button launch-link" href="${info.adminUrl}">관리자 모드 열기</a>
             <a class="ghost-button launch-link" href="${info.surveyUrl}" target="_blank" rel="noreferrer">학생용 설문 미리보기</a>
           </div>
-          <div class="launch-meta">
-            <div class="meta-card">
-              <span class="stat-label">이 컴퓨터에서 열기</span>
-              <strong>${info.localUrl || info.url}</strong>
-            </div>
-            <div class="meta-card">
-              <span class="stat-label">휴대폰 접속 주소</span>
-              <strong>${info.surveyUrl}</strong>
-            </div>
-          </div>
         </div>
         <aside class="launch-qr-panel">
           <p class="eyebrow">Student Access</p>
           <h2>아이들이 이 QR을 스캔하면 설문으로 바로 들어갑니다</h2>
           ${info.qrDataUrl ? `<img class="launch-qr" src="${info.qrDataUrl}" alt="학생용 설문 QR 코드" />` : '<div class="empty-state">QR을 생성하지 못했습니다.</div>'}
+          <div class="launch-meta">
+            <div class="meta-card">
+              <span class="stat-label">휴대폰 접속 주소</span>
+              <strong>${info.surveyUrl}</strong>
+            </div>
+          </div>
           <p class="muted">휴대폰이 같은 Wi-Fi에 연결되어 있어야 열립니다. QR이 안 되면 위 주소를 직접 입력해 확인하세요.</p>
         </aside>
       </section>
