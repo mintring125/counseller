@@ -1133,6 +1133,28 @@ h1, h2, h3, p { margin: 0; }
   border: 1px solid rgba(108, 92, 231, 0.08);
   border-radius: 20px;
 }
+.ego-legend {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  gap: 14px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(108, 92, 231, 0.12);
+  box-shadow: 0 4px 12px rgba(31, 36, 51, 0.08);
+  z-index: 10;
+}
+.ego-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
 
 /* ── Ego tooltip ── */
 .ego-tooltip {

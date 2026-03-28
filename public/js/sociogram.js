@@ -976,6 +976,24 @@
     /* Intro animation */
     node.style("opacity", 0).transition().delay((d, i) => i * 50).duration(400).style("opacity", 1);
     linkGroup.style("opacity", 0).transition().delay(300).duration(500).style("opacity", 1);
+
+    /* Legend */
+    const legend = d3.select(container).append("div")
+      .attr("class", "ego-legend");
+    legend.html(`
+      <div class="ego-legend-item">
+        <svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#00b894" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span>긍정 지명</span>
+      </div>
+      <div class="ego-legend-item">
+        <svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#e17055" stroke-width="2.5" stroke-dasharray="5 3" stroke-linecap="round"/></svg>
+        <span>부정 지명</span>
+      </div>
+      <div class="ego-legend-item">
+        <svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#f9a825" stroke-width="3.5" stroke-linecap="round"/></svg>
+        <span>상호 선택</span>
+      </div>
+    `);
   }
 
   window.Sociogram = { renderSociogram, renderEgoSociogram };
